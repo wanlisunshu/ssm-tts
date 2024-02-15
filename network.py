@@ -2,6 +2,7 @@ from module import *
 from utils import get_positional_table, get_sinusoid_encoding_table
 import hyperparams as hp
 import copy
+import torch.autograd as autograd
 
 class Encoder(nn.Module):
     """
@@ -75,6 +76,13 @@ class MelDecoder(nn.Module):
 
         self.postconvnet = PostConvNet(num_hidden)
 
+        self.energy_weights_logits = nn.Sequential(OrderedDict([
+            ('fc1', Linear(num_hidden, num_hidden * 2)),
+            ('relu1', nn.ReLU()),
+            ('dropout1', nn.Dropout(transformer_dropout)),
+            ('fc2', Linear(num_hidden * 2, 1)),
+        ]))
+        self.logits_linear = Linear(num_hidden, 1)
     def forward(self, memory, decoder_input, c_mask, pos):
         batch_size = memory.size(0)
         decoder_len = decoder_input.size(1)
@@ -124,34 +132,78 @@ class MelDecoder(nn.Module):
 
         # Mel linear projection
         mel_out = self.mel_linear(decoder_input)
-        
-        # Post Mel Network
-        postnet_input = mel_out.transpose(1, 2)
-        out = self.postconvnet(postnet_input)
-        out = postnet_input + out
-        out = out.transpose(1, 2)
 
-        # Stop tokens
-        stop_tokens = self.stop_linear(decoder_input)
+        # energy weights
+        energy_score = self.energy_weights_logits(mel_out)
+        energy_weights = t.softmax(energy_score.squeeze(2), dim=-1)
 
-        return mel_out, out, attn_dot_list, stop_tokens, attn_dec_list
 
+
+        # Logits linear projection
+        logits = self.logits_linear(mel_out)
+        logits = logits.squeeze(2)
+        # get mean value and ignore padding
+        # m_mask = m_mask.unsqueeze(2)
+        logits = logits.mul(m_mask)
+
+        # energy score based on weighted weights
+        logits = logits.mul(energy_weights)
+        logits = logits.sum(dim=1)
+
+        # # Post Mel Network
+        # postnet_input = mel_out.transpose(1, 2)
+        # out = self.postconvnet(postnet_input)
+        # out = postnet_input + out
+        # out = out.transpose(1, 2)
+        #
+        # # Stop tokens
+        # stop_tokens = self.stop_linear(decoder_input)
+
+        # return mel_out, out, attn_dot_list, stop_tokens, attn_dec_list
+        return logits
 
 class Model(nn.Module):
     """
     Transformer Network
+
     """
     def __init__(self):
         super(Model, self).__init__()
         self.encoder = Encoder(hp.embedding_size, hp.hidden_size)
         self.decoder = MelDecoder(hp.hidden_size)
+        # projections in random directions
+        self.vector  = torch.randn_like(hp.batch_size, hp.z_dim)
+
+
 
     def forward(self, characters, mel_input, pos_text, pos_mel):
         memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
-        mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
-                                                                                             pos=pos_mel)
+        # mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
+        #                                                                                      pos=pos_mel)
+        #
+        # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
+        logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
 
-        return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
+        # Batch_size*Length*80
+        dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
+        # Batch_size*Length*80
+        vectors = torch.randn_like(dup_mel_input)
+
+        # score, a.k.a. gradient of logP, negtive gradient of energy
+        grad1 = autograd.grad(-logits, dup_mel_input)
+        gradv = torch.sum(grad1 * vectors)
+        # second term in Eq. 8
+        loss2 = torch.sum(grad1 * grad1, dim=-1) / 2
+        grad2 = autograd.grad(gradv, dup_mel_input, create_graph=True)[0]
+        # first term in Eq. 8
+        loss1 = torch.sum(vectors * grad2, dim=-1)
+
+        # why?
+        loss1 = loss1.view(1, -1).mean(dim=0)
+        loss2 = loss2.view(1, -1).mean(dim=0)
+
+        loss = loss1 + loss2
+        return loss.mean()
 
 
 class ModelPostNet(nn.Module):
