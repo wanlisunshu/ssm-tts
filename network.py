@@ -190,7 +190,7 @@ class Model(nn.Module):
         vectors = torch.randn_like(dup_mel_input)
 
         # score, a.k.a. gradient of logP, negtive gradient of energy
-        grad1 = autograd.grad(-logits, dup_mel_input)
+        grad1 = logits
         gradv = torch.sum(grad1 * vectors)
         # second term in Eq. 8
         loss2 = torch.sum(grad1 * grad1, dim=-1) / 2
