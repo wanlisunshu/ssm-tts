@@ -25,12 +25,15 @@ class Encoder(nn.Module):
     def forward(self, x, pos):
 
         # Get character mask
-        if self.training:
-            c_mask = pos.ne(0).type(t.float)
-            mask = pos.eq(0).unsqueeze(1).repeat(1, x.size(1), 1)
+        # if self.training:
+        #     c_mask = pos.ne(0).type(t.float)
+        #     mask = pos.eq(0).unsqueeze(1).repeat(1, x.size(1), 1)
+        #
+        # else:
+        #     c_mask, mask = None, None
 
-        else:
-            c_mask, mask = None, None
+        c_mask = pos.ne(0).type(t.float)
+        mask = pos.eq(0).unsqueeze(1).repeat(1, x.size(1), 1)
 
         # Encoder pre-network
         x = self.encoder_prenet(x)
@@ -71,15 +74,19 @@ class MelDecoder(nn.Module):
         self.selfattn_layers = clones(Attention(num_hidden), 3)
         self.dotattn_layers = clones(Attention(num_hidden), 3)
         self.ffns = clones(FFN(num_hidden), 3)
-        self.mel_linear = Linear(num_hidden, hp.num_mels * hp.outputs_per_step)
-        self.stop_linear = Linear(num_hidden, 1, w_init='sigmoid')
+        self.mel_linear = nn.Sequential(OrderedDict([
+            ('fc1', Linear(num_hidden, num_hidden)),
+            ('relu1', nn.ReLU()),
+            ('dropout1', nn.Dropout(0.0)),
+        ]))
+        # self.stop_linear = Linear(num_hidden, 1, w_init='sigmoid')
 
-        self.postconvnet = PostConvNet(num_hidden)
+        # self.postconvnet = PostConvNet(num_hidden)
 
         self.energy_weights_logits = nn.Sequential(OrderedDict([
             ('fc1', Linear(num_hidden, num_hidden * 2)),
             ('relu1', nn.ReLU()),
-            ('dropout1', nn.Dropout(transformer_dropout)),
+            ('dropout1', nn.Dropout(0.0)),
             ('fc2', Linear(num_hidden * 2, 1)),
         ]))
         self.logits_linear = Linear(num_hidden, 1)
@@ -88,23 +95,34 @@ class MelDecoder(nn.Module):
         decoder_len = decoder_input.size(1)
 
         # get decoder mask with triangular matrix
-        if self.training:
-            m_mask = pos.ne(0).type(t.float)
-            mask = m_mask.eq(0).unsqueeze(1).repeat(1, decoder_len, 1)
-            if next(self.parameters()).is_cuda:
-                mask = mask + t.triu(t.ones(decoder_len, decoder_len).cuda(), diagonal=1).repeat(batch_size, 1, 1).byte()
-            else:
-                mask = mask + t.triu(t.ones(decoder_len, decoder_len), diagonal=1).repeat(batch_size, 1, 1).byte()
-            mask = mask.gt(0)
-            zero_mask = c_mask.eq(0).unsqueeze(-1).repeat(1, 1, decoder_len)
-            zero_mask = zero_mask.transpose(1, 2)
+        # if self.training:
+        #     m_mask = pos.ne(0).type(t.float)
+        #     mask = m_mask.eq(0).unsqueeze(1).repeat(1, decoder_len, 1)
+        #     if next(self.parameters()).is_cuda:
+        #         mask = mask + t.triu(t.ones(decoder_len, decoder_len).cuda(), diagonal=1).repeat(batch_size, 1, 1).byte()
+        #     else:
+        #         mask = mask + t.triu(t.ones(decoder_len, decoder_len), diagonal=1).repeat(batch_size, 1, 1).byte()
+        #     mask = mask.gt(0)
+        #     zero_mask = c_mask.eq(0).unsqueeze(-1).repeat(1, 1, decoder_len)
+        #     zero_mask = zero_mask.transpose(1, 2)
+        # else:
+        #     if next(self.parameters()).is_cuda:
+        #         mask = t.triu(t.ones(decoder_len, decoder_len).cuda(), diagonal=1).repeat(batch_size, 1, 1).byte()
+        #     else:
+        #         mask = t.triu(t.ones(decoder_len, decoder_len), diagonal=1).repeat(batch_size, 1, 1).byte()
+        #     mask = mask.gt(0)
+        #     m_mask, zero_mask = None, None
+
+        m_mask = pos.ne(0).type(t.float)
+        mask = m_mask.eq(0).unsqueeze(1).repeat(1, decoder_len, 1)
+        if next(self.parameters()).is_cuda:
+            mask = mask + t.triu(t.ones(decoder_len, decoder_len).cuda(), diagonal=1).repeat(batch_size, 1, 1).byte()
         else:
-            if next(self.parameters()).is_cuda:
-                mask = t.triu(t.ones(decoder_len, decoder_len).cuda(), diagonal=1).repeat(batch_size, 1, 1).byte()
-            else:
-                mask = t.triu(t.ones(decoder_len, decoder_len), diagonal=1).repeat(batch_size, 1, 1).byte()
-            mask = mask.gt(0)
-            m_mask, zero_mask = None, None
+            mask = mask + t.triu(t.ones(decoder_len, decoder_len), diagonal=1).repeat(batch_size, 1, 1).byte()
+        mask = mask.gt(0)
+        zero_mask = c_mask.eq(0).unsqueeze(-1).repeat(1, 1, decoder_len)
+        zero_mask = zero_mask.transpose(1, 2)
+
 
         # Decoder pre-network
         decoder_input = self.decoder_prenet(decoder_input)
@@ -171,10 +189,6 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.encoder = Encoder(hp.embedding_size, hp.hidden_size)
         self.decoder = MelDecoder(hp.hidden_size)
-        # projections in random directions
-        self.vector  = torch.randn_like(hp.batch_size, hp.z_dim)
-
-
 
     def forward(self, characters, mel_input, pos_text, pos_mel):
         memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
@@ -186,21 +200,27 @@ class Model(nn.Module):
 
         # Batch_size*Length*80
         dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
+        dup_mel_input.requires_grad_(True)
         # Batch_size*Length*80
-        vectors = torch.randn_like(dup_mel_input)
+        vectors = t.randn_like(dup_mel_input)
 
         # score, a.k.a. gradient of logP, negtive gradient of energy
         grad1 = logits
-        gradv = torch.sum(grad1 * vectors)
+        # mel masking, e.g. shape: B*L
+        mel_mask = pos_mel.ne(0).type(t.float)
+        # length of mel, e.g. B*1
+        mel_length = mel_mask.sum(dim=-1)
+        # shape: B*L*1
+        mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
+        # shape: scalar
+        gradv = t.sum(((grad1.view(-1, 1, 1) * vectors) * mel_mask).sum(dim=-1).sum(dim=-1) / mel_length)
+
         # second term in Eq. 8
-        loss2 = torch.sum(grad1 * grad1, dim=-1) / 2
+        loss2 = t.sum(grad1 * grad1, dim=-1) / 2 / grad1.shape[0]
         grad2 = autograd.grad(gradv, dup_mel_input, create_graph=True)[0]
         # first term in Eq. 8
-        loss1 = torch.sum(vectors * grad2, dim=-1)
+        loss1 = t.sum(vectors * grad2, dim=-1)
 
-        # why?
-        loss1 = loss1.view(1, -1).mean(dim=0)
-        loss2 = loss2.view(1, -1).mean(dim=0)
 
         loss = loss1 + loss2
         return loss.mean()
