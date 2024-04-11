@@ -198,33 +198,33 @@ class Model(nn.Module):
         # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
         logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
 
-        # Batch_size*Length*80
-        dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
-        dup_mel_input.requires_grad_(True)
-        # Batch_size*Length*80
-        vectors = t.randn_like(dup_mel_input)
-
-        # score, a.k.a. gradient of logP, negtive gradient of energy
-        grad1 = logits
-        # mel masking, e.g. shape: B*L
-        mel_mask = pos_mel.ne(0).type(t.float)
-        # length of mel, e.g. B*1
-        mel_length = mel_mask.sum(dim=-1)
-        # shape: B*L*1
-        mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
-        # shape: scalar
-        gradv = t.sum(((grad1.view(-1, 1, 1) * vectors) * mel_mask).sum(dim=-1).sum(dim=-1) / mel_length)
-
-        # second term in Eq. 8
-        loss2 = t.sum(grad1 * grad1, dim=-1) / 2 / grad1.shape[0]
-        grad2 = autograd.grad(gradv, dup_mel_input, create_graph=True)[0]
-        # first term in Eq. 8
-        loss1 = t.sum(vectors * grad2, dim=-1)
-
-
-        loss = loss1 + loss2
-        return loss.mean()
-
+        # # Batch_size*Length*80
+        # # dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
+        # mel_input.requires_grad_(True)
+        # # Batch_size*Length*80
+        # vectors = t.randn_like(mel_input)
+        #
+        # # score, a.k.a. gradient of logP, negtive gradient of energy
+        # grad1 = logits
+        # # mel masking, e.g. shape: B*L
+        # mel_mask = pos_mel.ne(0).type(t.float)
+        # # length of mel, e.g. B*1
+        # mel_length = mel_mask.sum(dim=-1)
+        # # shape: B*L*1
+        # mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
+        # # shape: scalar
+        # gradv = t.sum(((grad1.view(-1, 1, 1) * vectors) * mel_mask).sum(dim=-1).sum(dim=-1) / mel_length)
+        #
+        # # second term in Eq. 8
+        # loss2 = t.sum(grad1 * grad1, dim=-1) / 2 / grad1.shape[0]
+        # grad2 = autograd.grad(gradv, mel_input, create_graph=True)[0]
+        # # first term in Eq. 8
+        # loss1 = t.sum(vectors * grad2, dim=-1)
+        #
+        #
+        # loss = loss1 + loss2
+        # return loss.mean()
+        return logits.mean()
 
 class ModelPostNet(nn.Module):
     """
