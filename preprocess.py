@@ -72,7 +72,7 @@ class PostDatasets(Dataset):
 def collate_fn_transformer(batch):
 
     # Puts each data field into a tensor with outer dimension batch size
-    if isinstance(batch[0], collections.Mapping):
+    if isinstance(batch[0], collections.abc.Mapping):
 
         text = [d['text'] for d in batch]
         mel = [d['mel'] for d in batch]

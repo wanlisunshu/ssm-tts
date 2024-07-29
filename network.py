@@ -117,6 +117,8 @@ class MelDecoder(nn.Module):
         mask = m_mask.eq(0).unsqueeze(1).repeat(1, decoder_len, 1)
         if next(self.parameters()).is_cuda:
             mask = mask + t.triu(t.ones(decoder_len, decoder_len).cuda(), diagonal=1).repeat(batch_size, 1, 1).byte()
+        elif next(self.parameters()).is_mps:
+            mask = mask + t.triu(t.ones(decoder_len, decoder_len).to(t.device("mps")), diagonal=1).repeat(batch_size, 1, 1).byte()
         else:
             mask = mask + t.triu(t.ones(decoder_len, decoder_len), diagonal=1).repeat(batch_size, 1, 1).byte()
         mask = mask.gt(0)
@@ -125,31 +127,31 @@ class MelDecoder(nn.Module):
 
 
         # Decoder pre-network
-        decoder_input = self.decoder_prenet(decoder_input)
+        decoder_temp = self.decoder_prenet(decoder_input)
 
         # Centered position
-        decoder_input = self.norm(decoder_input)
+        decoder_temp = self.norm(decoder_temp)
 
         # Get positional embedding, apply alpha and add
-        pos = self.pos_emb(pos)
-        decoder_input = pos * self.alpha + decoder_input
+        pos_embedding = self.pos_emb(pos)
+        decoder_temp = pos_embedding * self.alpha + decoder_temp
 
         # Positional dropout
-        decoder_input = self.pos_dropout(decoder_input)
+        decoder_temp = self.pos_dropout(decoder_temp)
 
         # Attention decoder-decoder, encoder-decoder
         attn_dot_list = list()
         attn_dec_list = list()
 
         for selfattn, dotattn, ffn in zip(self.selfattn_layers, self.dotattn_layers, self.ffns):
-            decoder_input, attn_dec = selfattn(decoder_input, decoder_input, mask=mask, query_mask=m_mask)
-            decoder_input, attn_dot = dotattn(memory, decoder_input, mask=zero_mask, query_mask=m_mask)
-            decoder_input = ffn(decoder_input)
+            decoder_temp, attn_dec = selfattn(decoder_temp, decoder_temp, mask=mask, query_mask=m_mask)
+            decoder_temp, attn_dot = dotattn(memory, decoder_temp, mask=zero_mask, query_mask=m_mask)
+            decoder_temp = ffn(decoder_temp)
             attn_dot_list.append(attn_dot)
             attn_dec_list.append(attn_dec)
 
         # Mel linear projection
-        mel_out = self.mel_linear(decoder_input)
+        mel_out = self.mel_linear(decoder_temp)
 
         # energy weights
         energy_score = self.energy_weights_logits(mel_out)
@@ -196,35 +198,39 @@ class Model(nn.Module):
         #                                                                                      pos=pos_mel)
         #
         # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
+        mel_input.requires_grad_(True)
+
         logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
 
-        # # Batch_size*Length*80
-        # # dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
-        # mel_input.requires_grad_(True)
-        # # Batch_size*Length*80
-        # vectors = t.randn_like(mel_input)
-        #
-        # # score, a.k.a. gradient of logP, negtive gradient of energy
-        # grad1 = logits
-        # # mel masking, e.g. shape: B*L
-        # mel_mask = pos_mel.ne(0).type(t.float)
-        # # length of mel, e.g. B*1
-        # mel_length = mel_mask.sum(dim=-1)
-        # # shape: B*L*1
-        # mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
-        # # shape: scalar
-        # gradv = t.sum(((grad1.view(-1, 1, 1) * vectors) * mel_mask).sum(dim=-1).sum(dim=-1) / mel_length)
-        #
-        # # second term in Eq. 8
-        # loss2 = t.sum(grad1 * grad1, dim=-1) / 2 / grad1.shape[0]
-        # grad2 = autograd.grad(gradv, mel_input, create_graph=True)[0]
-        # # first term in Eq. 8
-        # loss1 = t.sum(vectors * grad2, dim=-1)
-        #
-        #
-        # loss = loss1 + loss2
-        # return loss.mean()
-        return logits.mean()
+        # Batch_size*Length*80
+        # dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
+
+        # Batch_size*Length*80
+        vectors = t.randn_like(mel_input)
+        vectors = t.randn_like(t.zeros(mel_input.shape)).to(mel_input.device)
+
+        # score, a.k.a. gradient of logP, negtive gradient of energy
+        grad1 = logits
+        # mel masking, e.g. shape: B*L
+        mel_mask = pos_mel.ne(0).type(t.float)
+        # length of mel, e.g. B*1
+        mel_length = mel_mask.sum(dim=-1)
+        # shape: B*L*1
+        mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
+        # shape: scalar
+        gradv = t.sum(((grad1.view(-1, 1, 1) * vectors) * mel_mask).sum(dim=-1).sum(dim=-1) / mel_length)
+
+        # second term in Eq. 8
+        loss2 = t.sum(grad1 * grad1, dim=-1) / 2 / grad1.shape[0]
+        grad2 = autograd.grad(gradv, mel_input, create_graph=True)[0]
+
+        # first term in Eq. 8
+        loss1 = t.sum(vectors * grad2, dim=-1)
+
+
+        loss = loss1 + loss2
+        return loss.mean(), loss1.mean(), loss2
+        # return logits.mean()
 
 class ModelPostNet(nn.Module):
     """
