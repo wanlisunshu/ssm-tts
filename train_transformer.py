@@ -27,7 +27,7 @@ def main(output_directory):
     dataset = get_dataset()
     global_step = 0
     
-    m = nn.DataParallel(Model().to(device))
+    m = Model().to(device)
 
     m.train()
     optimizer = t.optim.Adam(m.parameters(), lr=hp.lr)
