@@ -199,14 +199,14 @@ class Model(nn.Module):
         #
         # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
         mel_input.requires_grad_(True)
-
+:
         logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
 
         # Batch_size*Length*80
         # dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
 
         # Batch_size*Length*80
-        vectors = t.randn_like(mel_input)
+        # vectors = t.randn_like(mel_input)
         vectors = t.randn_like(t.zeros(mel_input.shape)).to(mel_input.device)
 
         # score, a.k.a. gradient of logP, negtive gradient of energy
