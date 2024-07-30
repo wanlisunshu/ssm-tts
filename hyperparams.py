@@ -23,14 +23,18 @@ n_iter = 60
 # power = 1.5
 outputs_per_step = 1
 
-epochs = 10000
+epochs = 10
 lr = 0.001
 save_step = 2000
-image_step = 500
-batch_size = 32
+image_step = 100
+batch_size = 8
 
 cleaners='english_cleaners'
 
-data_path = './data/LJSpeech-1.1'
+data_path = '../dataset/LJSpeech-1.1'
 checkpoint_path = './checkpoint'
 sample_path = './samples'
+
+train_path = 'filelists/ljs_audio_text_train_filelist_mini.txt'
+val_path = 'filelists/ljs_audio_text_val_filelist_mini.txt'
+test_path = 'filelists/ljs_audio_text_test_filelist_1300.txt'
