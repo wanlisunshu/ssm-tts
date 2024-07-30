@@ -27,10 +27,15 @@ epochs = 10
 lr = 0.001
 save_step = 2000
 image_step = 100
-batch_size = 4
+
+batch_size = 8
 
 cleaners='english_cleaners'
 
-data_path = '/store/store2/data/acp21ws/LJSpeech-1.1'
+data_path = '../dataset/LJSpeech-1.1'
 checkpoint_path = './checkpoint'
 sample_path = './samples'
+
+train_path = 'filelists/ljs_audio_text_train_filelist_mini.txt'
+val_path = 'filelists/ljs_audio_text_val_filelist_mini.txt'
+test_path = 'filelists/ljs_audio_text_test_filelist_1300.txt'
