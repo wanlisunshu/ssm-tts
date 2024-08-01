@@ -14,14 +14,15 @@ import math
 class LJDatasets(Dataset):
     """LJSpeech dataset."""
 
-    def __init__(self, csv_file, root_dir):
+    def __init__(self, filename, root_dir):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
             root_dir (string): Directory with all the wavs.
 
         """
-        self.landmarks_frame = pd.read_csv(csv_file, sep='|', header=None)
+        with open(filename, encoding='utf-8') as f:
+            self.landmarks_frame = [line.strip().split('|') for line in f]
         self.root_dir = root_dir
 
     def load_wav(self, filename):
@@ -31,8 +32,8 @@ class LJDatasets(Dataset):
         return len(self.landmarks_frame)
 
     def __getitem__(self, idx):
-        wav_name = self.landmarks_frame.iloc[idx, 0]
-        text = self.landmarks_frame.iloc[idx, 1]
+        wav_name = self.landmarks_frame[idx][0]
+        text = self.landmarks_frame[idx][1]
 
         text = np.asarray(text_to_sequence(text, [hp.cleaners]), dtype=np.int32)
         mel = np.load(wav_name[:-4] + '.pt.npy')
