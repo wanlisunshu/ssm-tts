@@ -151,7 +151,6 @@ def main(output_directory):
                 loss1_iter = 0
                 loss2_iter = 0
 
-                print("loss_iter:", loss_iter)
                 draw_iter_loss_figure([loss_iter_list, loss1_iter_list, loss2_iter_list], iter_num_list, 'iteration', output_directory)
                 # for i, prob in enumerate(attn_probs):
                 #
@@ -208,7 +207,6 @@ def main(output_directory):
         draw_loss_figures([loss_epoch_list, loss1_epoch_list, loss2_epoch_list],
                           [val_loss_epoch_list, val_loss1_epoch_list, val_loss2_epoch_list],
                           epoch_list, output_directory)
-        print("loss_epoch:", loss_epoch)
 
 
 if __name__ == '__main__':
