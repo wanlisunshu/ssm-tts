@@ -36,6 +36,6 @@ data_path = '../dataset/LJSpeech-1.1'
 checkpoint_path = './checkpoint'
 sample_path = './samples'
 
-train_path = 'filelists/ljs_audio_text_train_filelist_mini.txt'
-val_path = 'filelists/ljs_audio_text_val_filelist_mini.txt'
+train_path = 'filelists/ljs_audio_text_train_filelist_10000.txt'
+val_path = 'filelists/ljs_audio_text_val_filelist_1800.txt'
 test_path = 'filelists/ljs_audio_text_test_filelist_1300.txt'
