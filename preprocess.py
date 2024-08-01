@@ -36,8 +36,13 @@ class LJDatasets(Dataset):
         text = self.landmarks_frame[idx][1]
 
         text = np.asarray(text_to_sequence(text, [hp.cleaners]), dtype=np.int32)
-        mel = np.load(wav_name[:-4] + '.pt.npy')
-        mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
+
+        audio_name = wav_name.strip().split('/')[4]
+        audio_name = 'pos_train_val_mels' + '/' + audio_name + '.pt'
+        mel = t.load(audio_name).T
+
+        # mel = np.load(wav_name[:-4] + '.pt.npy')
+        mel_input = np.concatenate ([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
         text_length = len(text)
         pos_text = np.arange(1, text_length + 1)
         pos_mel = np.arange(1, mel.shape[0] + 1)
