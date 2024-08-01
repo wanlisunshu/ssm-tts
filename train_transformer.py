@@ -121,9 +121,7 @@ def main(output_directory):
             loss1_iter += loss1.item()
             loss1_epoch += loss1.item()
             loss2_iter += loss2.item()
-            loss2_epoch += loss2.item()
-            print(loss.item())
-            # mel_loss = nn.L1Loss()(mel_pred, mel)
+            loss2_epoch += loss2.item()            # mel_loss = nn.L1Loss()(mel_pred, mel)
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
 
             # loss = mel_loss + post_mel_loss
