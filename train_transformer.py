@@ -196,9 +196,9 @@ def main(output_directory):
 
         epoch_list.append(epoch)
 
-        loss_epoch /= len(dataloader)
-        loss1_epoch /= len(dataloader)
-        loss2_epoch /= len(dataloader)
+        loss_epoch /= len(dataloader.dataset)
+        loss1_epoch /= len(dataloader.dataset)
+        loss2_epoch /= len(dataloader.dataset)
         loss_epoch_list.append(loss_epoch)
         loss1_epoch_list.append(loss1_epoch)
         loss2_epoch_list.append(loss2_epoch)
