@@ -44,9 +44,9 @@ def validation(m, epoch, device):
         val_loss += loss.item()
         val_loss1 += loss1.item()
         val_loss2 += loss2.item()
-    val_loss = val_loss / len(val_loader.dataset)
-    val_loss1 = val_loss1 / len(val_loader.dataset)
-    val_loss2 = val_loss2 / len(val_loader.dataset)
+    val_loss = val_loss / (len(val_loader) + 1)
+    val_loss1 = val_loss1 / (len(val_loader) + 1)
+    val_loss2 = val_loss2 / (len(val_loader) + 1)
 
     m.train()
     print("Validation average loss in epoch {}: {:9f}, loss1: {:9f}, loss2 {:9f} ".format(epoch, val_loss,
@@ -192,9 +192,9 @@ def main(output_directory):
 
         epoch_list.append(epoch)
 
-        loss_epoch /= len(dataloader.dataset)
-        loss1_epoch /= len(dataloader.dataset)
-        loss2_epoch /= len(dataloader.dataset)
+        loss_epoch /= (len(dataloader) + 1)
+        loss1_epoch /= (len(dataloader) + 1)
+        loss2_epoch /= (len(dataloader) + 1)
         loss_epoch_list.append(loss_epoch)
         loss1_epoch_list.append(loss1_epoch)
         loss2_epoch_list.append(loss2_epoch)
