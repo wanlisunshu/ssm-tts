@@ -184,10 +184,6 @@ def main(output_directory):
 
             # Update weights
             optimizer.step()
-            if global_step % hp.save_step == 0:
-                t.save({'model':m.state_dict(),
-                                 'optimizer':optimizer.state_dict()},
-                                os.path.join(hp.checkpoint_path,'checkpoint_transformer_%d.pth.tar' % global_step))
         val_loss, val_loss1, val_loss2 = validation(m, epoch, device)
 
         val_loss_epoch_list.append(val_loss)
