@@ -74,22 +74,23 @@ class MelDecoder(nn.Module):
         self.selfattn_layers = clones(Attention(num_hidden), 3)
         self.dotattn_layers = clones(Attention(num_hidden), 3)
         self.ffns = clones(FFN(num_hidden), 3)
-        self.mel_linear = nn.Sequential(OrderedDict([
-            ('fc1', Linear(num_hidden, num_hidden)),
-            ('relu1', nn.ReLU()),
-            ('dropout1', nn.Dropout(0.0)),
-        ]))
-        # self.stop_linear = Linear(num_hidden, 1, w_init='sigmoid')
+        self.mel_linear = Linear(num_hidden, hp.num_mels * hp.outputs_per_step)
+        # self.mel_linear = nn.Sequential(OrderedDict([
+        #     ('fc1', Linear(num_hidden, num_hidden)),
+        #     ('relu1', nn.ReLU()),
+        #     ('dropout1', nn.Dropout(0.0)),
+        # ]))
+        self.stop_linear = Linear(num_hidden, 1, w_init='sigmoid')
 
         # self.postconvnet = PostConvNet(num_hidden)
 
-        self.energy_weights_logits = nn.Sequential(OrderedDict([
-            ('fc1', Linear(num_hidden, num_hidden * 2)),
-            ('relu1', nn.ReLU()),
-            ('dropout1', nn.Dropout(0.0)),
-            ('fc2', Linear(num_hidden * 2, 1)),
-        ]))
-        self.logits_linear = Linear(num_hidden, 1)
+        # self.energy_weights_logits = nn.Sequential(OrderedDict([
+        #     ('fc1', Linear(num_hidden, num_hidden * 2)),
+        #     ('relu1', nn.ReLU()),
+        #     ('dropout1', nn.Dropout(0.0)),
+        #     ('fc2', Linear(num_hidden * 2, 1)),
+        # ]))
+        # self.logits_linear = Linear(num_hidden, 1)
     def forward(self, memory, decoder_input, c_mask, pos):
         batch_size = memory.size(0)
         decoder_len = decoder_input.size(1)
@@ -127,48 +128,48 @@ class MelDecoder(nn.Module):
 
 
         # Decoder pre-network
-        decoder_temp = self.decoder_prenet(decoder_input)
+        decoder_input = self.decoder_prenet(decoder_input)
 
         # Centered position
-        decoder_temp = self.norm(decoder_temp)
+        decoder_input = self.norm(decoder_input)
 
         # Get positional embedding, apply alpha and add
         pos_embedding = self.pos_emb(pos)
-        decoder_temp = pos_embedding * self.alpha + decoder_temp
+        decoder_input = pos_embedding * self.alpha + decoder_input
 
         # Positional dropout
-        decoder_temp = self.pos_dropout(decoder_temp)
+        decoder_input = self.pos_dropout(decoder_input)
 
         # Attention decoder-decoder, encoder-decoder
         attn_dot_list = list()
         attn_dec_list = list()
 
         for selfattn, dotattn, ffn in zip(self.selfattn_layers, self.dotattn_layers, self.ffns):
-            decoder_temp, attn_dec = selfattn(decoder_temp, decoder_temp, mask=mask, query_mask=m_mask)
-            decoder_temp, attn_dot = dotattn(memory, decoder_temp, mask=zero_mask, query_mask=m_mask)
-            decoder_temp = ffn(decoder_temp)
+            decoder_input, attn_dec = selfattn(decoder_input, decoder_input, mask=mask, query_mask=m_mask)
+            decoder_input, attn_dot = dotattn(memory, decoder_input, mask=zero_mask, query_mask=m_mask)
+            decoder_input = ffn(decoder_input)
             attn_dot_list.append(attn_dot)
             attn_dec_list.append(attn_dec)
 
         # Mel linear projection
-        mel_out = self.mel_linear(decoder_temp)
+        mel_out = self.mel_linear(decoder_input)
 
-        # energy weights
-        energy_score = self.energy_weights_logits(mel_out)
-        energy_weights = t.softmax(energy_score.squeeze(2), dim=-1)
-
-
-
-        # Logits linear projection
-        logits = self.logits_linear(mel_out)
-        logits = logits.squeeze(2)
-        # get mean value and ignore padding
-        # m_mask = m_mask.unsqueeze(2)
-        logits = logits.mul(m_mask)
-
-        # energy score based on weighted weights
-        logits = logits.mul(energy_weights)
-        logits = logits.sum(dim=1)
+        # # energy weights
+        # energy_score = self.energy_weights_logits(mel_out)
+        # energy_weights = t.softmax(energy_score.squeeze(2), dim=-1)
+        #
+        #
+        #
+        # # Logits linear projection
+        # logits = self.logits_linear(mel_out)
+        # logits = logits.squeeze(2)
+        # # get mean value and ignore padding
+        # # m_mask = m_mask.unsqueeze(2)
+        # logits = logits.mul(m_mask)
+        #
+        # # energy score based on weighted weights
+        # logits = logits.mul(energy_weights)
+        # logits = logits.sum(dim=1)
 
         # # Post Mel Network
         # postnet_input = mel_out.transpose(1, 2)
@@ -176,10 +177,11 @@ class MelDecoder(nn.Module):
         # out = postnet_input + out
         # out = out.transpose(1, 2)
         #
-        # # Stop tokens
-        # stop_tokens = self.stop_linear(decoder_input)
+        # Stop tokens
+        stop_tokens = self.stop_linear(decoder_input)
 
         # return mel_out, out, attn_dot_list, stop_tokens, attn_dec_list
+        logits = mel_out
         return logits
 
 class Model(nn.Module):
@@ -199,36 +201,37 @@ class Model(nn.Module):
         #
         # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
         mel_input.requires_grad_(True)
+
+        # Batch_size * Length * 80
         logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
 
-        # Batch_size*Length*80
-        # dup_mel_input = mel_input.unsqueeze(0).expand(1, *mel_input.shape).contiguous().view(-1, *mel_input.shape[1:])
-
-        # Batch_size*Length*80
+        # B * L * 80
         # vectors = t.randn_like(mel_input)
         vectors = t.randn_like(t.zeros(mel_input.shape)).to(mel_input.device)
 
         # score, a.k.a. gradient of logP, negtive gradient of energy
         grad1 = logits
+
         # mel masking, e.g. shape: B*L
         mel_mask = pos_mel.ne(0).type(t.float)
-        # length of mel, e.g. B*1
+        # length of mel, e.g. shape: B,
         mel_length = mel_mask.sum(dim=-1)
-        # shape: B*L*1
+        # shape: B * L * 1
         mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
-        # shape: scalar
-        gradv = t.sum(((grad1.view(-1, 1, 1) * vectors) * mel_mask).sum(dim=-1).sum(dim=-1) / mel_length)
 
-        # second term in Eq. 8
-        loss2 = t.sum(grad1 * grad1, dim=-1) / 2 / grad1.shape[0]
-        grad2 = autograd.grad(gradv, mel_input, create_graph=True)[0]
+        # shape: B,
+        gradv = t.sum(t.sum(grad1 * vectors, dim=-1), dim=-1) / mel_length
 
-        # first term in Eq. 8
-        loss1 = t.sum(vectors * grad2, dim=-1)
+        # second term in Eq. 8, shape: B,
+        loss2 = t.sum(t.sum(grad1 * grad1 * mel_mask, dim=-1), dim=-1) / 2 / mel_length
 
+        grad2 = autograd.grad(gradv.mean(), mel_input, create_graph=True)[0]
+
+        # first term in Eq. 8, shape: B *
+        loss1 = t.sum(t.sum(vectors * grad2 * mel_mask, dim=-1), dim=-1) / mel_length
 
         loss = loss1 + loss2
-        return loss.mean(), loss1.mean(), loss2
+        return loss.mean(), loss1.mean(), loss2.mean()
         # return logits.mean()
 
 class ModelPostNet(nn.Module):
