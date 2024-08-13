@@ -16,7 +16,7 @@ def draw_iter_loss_figure(loss_list, iter_list, key_word, save_path):
     ax.set_title("Training Loss")
     ax.set_xlabel(key_word)
     ax.set_ylabel("loss")
-    ax.set_yscale("log")
+    ax.set_yscale("symlog")
     ax.legend()
 
     figure_name = ("loss_" + key_word)
@@ -58,12 +58,12 @@ def draw_loss_figures(train_epoch_loss_list, val_epoch_loss_list, iter_list, sav
     ax[2][0].set_xlabel("epoch")
     ax[2][1].set_xlabel("epoch")
 
-    ax1.set_yscale("log")
-    ax2.set_yscale("log")
-    ax3.set_yscale("log")
-    ax4.set_yscale("log")
-    ax5.set_yscale("log")
-    ax6.set_yscale("log")
+    ax1.set_yscale("symlog")
+    ax2.set_yscale("symlog")
+    ax3.set_yscale("symlog")
+    ax4.set_yscale("symlog")
+    ax5.set_yscale("symlog")
+    ax6.set_yscale("symlog")
 
     for axi in ax:
         for axj in axi:
