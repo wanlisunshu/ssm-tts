@@ -220,15 +220,15 @@ class Model(nn.Module):
         mel_mask = mel_mask.view(pos_mel.shape[0], -1, 1)
 
         # shape: B,
-        gradv = t.sum(t.sum(grad1 * vectors * mel_mask, dim=-1), dim=-1) / mel_length
+        gradv = t.sum(t.sum(grad1 * vectors * mel_mask, dim=-1) / 80, dim=-1) / mel_length
 
         # second term in Eq. 8, shape: B,
-        loss2 = t.sum(t.sum(grad1 * grad1 * mel_mask, dim=-1), dim=-1) / 2 / mel_length
+        loss2 = t.sum(t.sum(grad1 * grad1 * mel_mask, dim=-1) / 80, dim=-1) / 2 / mel_length
 
         grad2 = autograd.grad(gradv.mean(), mel_input, create_graph=True)[0]
 
         # first term in Eq. 8, shape: B *
-        loss1 = t.sum(t.sum(vectors * grad2 * mel_mask, dim=-1), dim=-1) / mel_length
+        loss1 = t.sum(t.sum(vectors * grad2 * mel_mask, dim=-1) / 80, dim=-1) / mel_length
 
         loss = loss1 + loss2
         return loss.mean(), loss1.mean(), loss2.mean()
