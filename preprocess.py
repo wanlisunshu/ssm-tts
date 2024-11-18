@@ -9,7 +9,7 @@ import collections
 from scipy import signal
 import torch as t
 import math
-
+from utils import load_neg_mel_drom_disk
 
 class LJDatasets(Dataset):
     """LJSpeech dataset."""
@@ -24,9 +24,15 @@ class LJDatasets(Dataset):
         with open(filename, encoding='utf-8') as f:
             self.landmarks_frame = [line.strip().split('|') for line in f]
         self.root_dir = root_dir
-
+        self.neg_mel_paths = 'train_val_mels'
     def load_wav(self, filename):
         return librosa.load(filename, sr=hp.sample_rate)
+
+    def get_neg_mel(self, filename):
+        audio_name = filename.strip().split('/')[4]
+        audio_name = self.neg_mel_paths + '/' + audio_name + '.pt'
+        text, neg_mel = load_neg_mel_drom_disk(audio_name)
+        return text, neg_mel.T
 
     def __len__(self):
         return len(self.landmarks_frame)
@@ -37,9 +43,10 @@ class LJDatasets(Dataset):
 
         text = np.asarray(text_to_sequence(text, [hp.cleaners]), dtype=np.int32)
 
-        audio_name = wav_name.strip().split('/')[4]
-        audio_name = 'pos_train_val_mels' + '/' + audio_name + '.pt'
-        mel = t.load(audio_name).T
+        _, mel = self.get_neg_mel(wav_name)
+        # audio_name = wav_name.strip().split('/')[4]
+        # audio_name = 'pos_train_val_mels' + '/' + audio_name + '.pt'
+        # mel = t.load(audio_name).T
 
         # mel = np.load(wav_name[:-4] + '.pt.npy')
         mel_input = np.concatenate ([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
@@ -129,6 +136,8 @@ def _pad_data(x, length):
 
 def _prepare_data(inputs):
     max_len = max((len(x) for x in inputs))
+    if max_len % 2:
+        max_len += 1
     return np.stack([_pad_data(x, max_len) for x in inputs])
 
 def _pad_per_step(inputs):
@@ -156,5 +165,7 @@ def _pad_mel(inputs):
         mel_len = x.shape[0]
         return np.pad(x, [[0,max_len - mel_len],[0,0]], mode='constant', constant_values=_pad)
     max_len = max((x.shape[0] for x in inputs))
+    if max_len % 2:
+        max_len += 1
     return np.stack([_pad_one(x, max_len) for x in inputs])
 
