@@ -18,6 +18,7 @@ hidden_size = 256
 embedding_size = 512
 max_db = 100
 ref_db = 20
+unet_dim = 128
     
 n_iter = 60
 # power = 1.5
