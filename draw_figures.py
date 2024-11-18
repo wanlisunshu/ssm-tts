@@ -22,6 +22,7 @@ def draw_iter_loss_figure(loss_list, iter_list, key_word, save_path):
     figure_name = ("loss_" + key_word)
     figure_path = os.path.join(save_path, figure_name)
     fig.savefig(figure_path)
+    plt.close("all")
 
 
 def draw_loss_figures(train_epoch_loss_list, val_epoch_loss_list, iter_list, save_path):
@@ -71,3 +72,4 @@ def draw_loss_figures(train_epoch_loss_list, val_epoch_loss_list, iter_list, sav
 
     figure_path = os.path.join(save_path, "train_val_loss_epoch")
     fig.savefig(figure_path)
+    plt.close("all")
