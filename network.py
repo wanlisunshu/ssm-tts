@@ -3,6 +3,8 @@ from utils import get_positional_table, get_sinusoid_encoding_table
 import hyperparams as hp
 import copy
 import torch.autograd as autograd
+from unet_1dconv import Decoder
+
 
 class Encoder(nn.Module):
     """
@@ -193,9 +195,10 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.encoder = Encoder(hp.embedding_size, hp.hidden_size)
         self.decoder = MelDecoder(hp.hidden_size)
-
+        self.mel_linear = Linear(hp.hidden_size, hp.num_mels * hp.outputs_per_step)
+        self.unet = Decoder(hp.n_mels, hp.n_mels)
     def forward(self, characters, mel_input, pos_text, pos_mel):
-        memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
+        # memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
         # mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
         #                                                                                      pos=pos_mel)
         #
@@ -203,8 +206,10 @@ class Model(nn.Module):
         mel_input.requires_grad_(True)
 
         # Batch_size * Length * 80
-        logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
+        # logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
+        # logits = self.mel_linear(decoder_input)
 
+        logits = self.unet(mel_input, pos_mel)
         # B * L * 80
         # vectors = t.randn_like(mel_input)
         vectors = t.randn_like(t.zeros(mel_input.shape)).to(mel_input.device)
