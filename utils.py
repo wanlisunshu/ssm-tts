@@ -133,3 +133,9 @@ def guided_attention(N, T, g=0.2):
         for t_pos in range(W.shape[1]):
             W[n_pos, t_pos] = 1 - np.exp(-(t_pos / float(T) - n_pos / float(N)) ** 2 / (2 * g * g))
     return W
+
+def load_neg_mel_drom_disk(audio_path):
+    text_mel_map = t.load(audio_path)
+    text = list(text_mel_map.keys())[0]
+    neg_mel = list(text_mel_map.values())[0]
+    return text, neg_mel
