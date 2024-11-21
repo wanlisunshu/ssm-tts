@@ -398,11 +398,14 @@ class Decoder(nn.Module):
             x = resnet(x, mask_down)
             x = rearrange(x, "b c t -> b t c")
             mask_down = rearrange(mask_down, "b 1 t -> b t")
-            for transformer_block in transformer_blocks:
-                x = transformer_block(
-                    hidden_states=x,
-                    attention_mask=mask_down,
-                )
+            from torch.nn.attention import SDPBackend, sdpa_kernel
+
+            with sdpa_kernel(SDPBackend.MATH):
+                for transformer_block in transformer_blocks:
+                    x = transformer_block(
+                        hidden_states=x,
+                        attention_mask=mask_down,
+                    )
             x = rearrange(x, "b t c -> b c t")
             mask_down = rearrange(mask_down, "b t -> b 1 t")
             hiddens.append(x)  # Save hidden states for skip connections
@@ -416,11 +419,12 @@ class Decoder(nn.Module):
             x = resnet(x, mask_mid)
             x = rearrange(x, "b c t -> b t c")
             mask_mid = rearrange(mask_mid, "b 1 t -> b t")
-            for transformer_block in transformer_blocks:
-                x = transformer_block(
-                    hidden_states=x,
-                    attention_mask=mask_mid,
-                )
+            with sdpa_kernel(SDPBackend.MATH):
+                for transformer_block in transformer_blocks:
+                    x = transformer_block(
+                        hidden_states=x,
+                        attention_mask=mask_mid,
+                    )
             x = rearrange(x, "b t c -> b c t")
             mask_mid = rearrange(mask_mid, "b t -> b 1 t")
 
@@ -429,11 +433,12 @@ class Decoder(nn.Module):
             x = resnet(pack([x, hiddens.pop()], "b * t")[0], mask_up)
             x = rearrange(x, "b c t -> b t c")
             mask_up = rearrange(mask_up, "b 1 t -> b t")
-            for transformer_block in transformer_blocks:
-                x = transformer_block(
-                    hidden_states=x,
-                    attention_mask=mask_up,
-                )
+            with sdpa_kernel(SDPBackend.MATH):
+                for transformer_block in transformer_blocks:
+                    x = transformer_block(
+                        hidden_states=x,
+                        attention_mask=mask_up,
+                    )
             x = rearrange(x, "b t c -> b c t")
             mask_up = rearrange(mask_up, "b t -> b 1 t")
             x = upsample(x * mask_up)
