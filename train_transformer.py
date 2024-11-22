@@ -8,6 +8,7 @@ from tqdm import tqdm
 import torch as t
 import argparse
 from pathlib import Path
+import wandb
 
 
 def adjust_learning_rate(optimizer, step_num, warmup_step=4000):
@@ -56,6 +57,7 @@ def validation(m, epoch, device):
 
 
 def main(output_directory):
+    wandb.init(project="only-unet-t2_in-ssm_loss")
 
     if t.backends.mps.is_available():
         device = t.device("mps")
@@ -152,6 +154,30 @@ def main(output_directory):
                 loss2_iter = 0
 
                 draw_iter_loss_figure([loss_iter_list, loss1_iter_list, loss2_iter_list], iter_num_list, 'iteration', output_directory)
+                # data = [[x, y] for (x, y) in zip(iter_num_list, loss_iter_list)]
+                # data1 = [[x, y] for (x, y) in zip(iter_num_list, loss1_iter_list)]
+                # data2 = [[x, y] for (x, y) in zip(iter_num_list, loss2_iter_list)]
+                # table = wandb.Table(data=data, columns=["x", "y"])
+                # table1 = wandb.Table(data=data1, columns=["x", "y"])
+                # table2 = wandb.Table(data=data2, columns=["x", "y"])
+                # wandb.log(
+                #     {
+                #         "loss": wandb.plot.line(
+                #          table, "iteration", "loss", title="Total loss")           
+                #     }
+                # )
+                # wandb.log(
+                #     {
+                #         "loss1": wandb.plot.line(
+                #          table1, "iteration", "loss", title="Loss1")           
+                #     }
+                # )
+                # wandb.log(
+                #     {
+                #         "loss2": wandb.plot.line(
+                #          table2, "iteration", "loss", title="Loss2")           
+                #     }
+                # )       
                 # for i, prob in enumerate(attn_probs):
                 #
                 #     num_h = prob.size(0)
@@ -200,6 +226,38 @@ def main(output_directory):
         loss2_epoch_list.append(loss2_epoch)
         epoch_num_list.append(epoch)
         draw_iter_loss_figure([loss_epoch_list, loss1_epoch_list, loss2_epoch_list], epoch_num_list, 'epoch', output_directory)
+        wandb.log({
+            "Total loss per epoch": loss_epoch, 
+            "Loss1 per epoch": loss1_epoch,
+            "Loss2 per epoc": loss2_epoch,
+            "Validation loss per epoch": val_loss,
+            "Validation loss1 per epoch": val_loss1,
+            "Validation loss2 per epoch": val_loss2,
+        })
+        # data = [[x, y] for (x, y) in zip(epoch_num_list, loss_epoch_list)]
+        # data1 = [[x, y] for (x, y) in zip(epoch_num_list, loss1_epoch_list)]
+        # data2 = [[x, y] for (x, y) in zip(epoch_num_list, loss2_epoch_list)]
+        # epoch_table = wandb.Table(data=data, columns=["x", "y"])
+        # epoch_table1 = wandb.Table(data=data1, columns=["x", "y"])
+        # epoch_table2 = wandb.Table(data=data2, columns=["x", "y"])
+        # wandb.log(
+        #     {
+        #         "epoch_loss": wandb.plot.line(
+        #          epoch_table, "epoch", "loss", title="Total loss per epoch")           
+        #     }
+        # )
+        # wandb.log(
+        #     {
+        #         "epoch_loss1": wandb.plot.line(
+        #          epoch_table1, "epoch", "loss", title="Loss1 per epoch")           
+        #     }
+        # )
+        # wandb.log(
+        #     {
+        #         "epoch_loss2": wandb.plot.line(
+        #          epoch_table2, "epoch", "loss", title="Loss2 per epoch")           
+        #     }
+        # )       
         draw_loss_figures([loss_epoch_list, loss1_epoch_list, loss2_epoch_list],
                           [val_loss_epoch_list, val_loss1_epoch_list, val_loss2_epoch_list],
                           epoch_list, output_directory)
