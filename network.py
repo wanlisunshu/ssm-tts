@@ -84,7 +84,7 @@ class MelDecoder(nn.Module):
         # ]))
         self.stop_linear = Linear(num_hidden, 1, w_init='sigmoid')
 
-        # self.postconvnet = PostConvNet(num_hidden)
+        self.postconvnet = PostConvNet(num_hidden)
 
         # self.energy_weights_logits = nn.Sequential(OrderedDict([
         #     ('fc1', Linear(num_hidden, num_hidden * 2)),
@@ -173,18 +173,18 @@ class MelDecoder(nn.Module):
         # logits = logits.mul(energy_weights)
         # logits = logits.sum(dim=1)
 
-        # # Post Mel Network
-        # postnet_input = mel_out.transpose(1, 2)
-        # out = self.postconvnet(postnet_input)
-        # out = postnet_input + out
-        # out = out.transpose(1, 2)
-        #
+        # Post Mel Network
+        postnet_input = mel_out.transpose(1, 2)
+        out = self.postconvnet(postnet_input)
+        out = postnet_input + out
+        out = out.transpose(1, 2)
+
         # Stop tokens
         stop_tokens = self.stop_linear(decoder_input)
 
-        # return mel_out, out, attn_dot_list, stop_tokens, attn_dec_list
-        logits = mel_out
-        return logits
+        return mel_out, out, attn_dot_list, stop_tokens, attn_dec_list
+        # logits = mel_out
+        # return logits
 
 class Model(nn.Module):
     """
@@ -198,21 +198,21 @@ class Model(nn.Module):
         self.mel_linear = Linear(hp.hidden_size, hp.num_mels * hp.outputs_per_step)
         self.unet = Decoder(hp.n_mels, hp.n_mels)
     def forward(self, characters, mel_input, pos_text, pos_mel):
-        # memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
-        # mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
-        #                                                                                      pos=pos_mel)
+        memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
+        mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
+                                                                                             pos=pos_mel)
         #
         # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
-        mel_input.requires_grad_(True)
+        mel_output.requires_grad_(True)
 
         # Batch_size * Length * 80
-        # logits = self.decoder.forward(memory, mel_input, c_mask, pos=pos_mel)
+        # logits = self.decoder.forward(memory, mel_output, c_mask, pos=pos_mel)
         # logits = self.mel_linear(decoder_input)
 
-        logits = self.unet(mel_input, pos_mel)
+        logits = self.unet(mel_output, pos_mel)
         # B * L * 80
-        # vectors = t.randn_like(mel_input)
-        vectors = t.randn_like(t.zeros(mel_input.shape)).to(mel_input.device)
+        # vectors = t.randn_like(mel_output)
+        vectors = t.randn_like(t.zeros(mel_output.shape)).to(mel_output.device)
 
         # score, a.k.a. gradient of logP, negtive gradient of energy
         grad1 = logits
@@ -230,13 +230,13 @@ class Model(nn.Module):
         # second term in Eq. 8, shape: B,
         loss2 = t.sum(t.sum(grad1 * grad1 * mel_mask, dim=-1) / 80, dim=-1) / 2 / mel_length
 
-        grad2 = autograd.grad(gradv.mean(), mel_input, create_graph=True)[0]
+        grad2 = autograd.grad(gradv.mean(), mel_output, create_graph=True)[0]
 
         # first term in Eq. 8, shape: B *
         loss1 = t.sum(t.sum(vectors * grad2 * mel_mask, dim=-1) / 80, dim=-1) / mel_length
 
         loss = loss1 + loss2
-        return loss.mean(), loss1.mean(), loss2.mean()
+        return loss.mean(), loss1.mean(), loss2.mean(), mel_output
         # return logits.mean()
 
 class ModelPostNet(nn.Module):

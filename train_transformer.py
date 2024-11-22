@@ -57,7 +57,7 @@ def validation(m, epoch, device):
 
 
 def main(output_directory):
-    wandb.init(project="only-unet-t2_in-ssm_loss")
+    wandb.init(project="trans_unet-ssm_loss-mse_loss")
 
     if t.backends.mps.is_available():
         device = t.device("mps")
@@ -101,6 +101,7 @@ def main(output_directory):
         loss_epoch = 0
         loss1_epoch = 0
         loss2_epoch = 0
+        mel_loss_epoch = 0
         for i, data in enumerate(pbar):
             pbar.set_description("Processing at epoch %d"%epoch)
             global_step += 1
@@ -117,13 +118,16 @@ def main(output_directory):
             pos_text = pos_text.to(device)
             pos_mel = pos_mel.to(device)
 
-            loss, loss1, loss2 = m.forward(character, mel, pos_text, pos_mel)
-            loss_iter += loss.item()
-            loss_epoch += loss.item()
-            loss1_iter += loss1.item()
-            loss1_epoch += loss1.item()
-            loss2_iter += loss2.item()
-            loss2_epoch += loss2.item()            # mel_loss = nn.L1Loss()(mel_pred, mel)
+            ssm_loss, ssm_loss1, ssm_loss2, mel_pred = m.forward(character, mel_input, pos_text, pos_mel)
+            loss_iter += ssm_loss.item()
+            loss_epoch += ssm_loss.item()
+            loss1_iter += ssm_loss1.item()
+            loss1_epoch += ssm_loss1.item()
+            loss2_iter += ssm_loss2.item()
+            loss2_epoch += ssm_loss2.item()
+            mel_loss = nn.L1Loss()(mel_pred, mel)
+            loss = ssm_loss + mel_loss
+            mel_loss_epoch += mel_loss
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
 
             # loss = mel_loss + post_mel_loss
@@ -221,6 +225,7 @@ def main(output_directory):
         loss_epoch /= (len(dataloader) + 1)
         loss1_epoch /= (len(dataloader) + 1)
         loss2_epoch /= (len(dataloader) + 1)
+        mel_loss_epoch /= (len(dataloader) + 1)
         loss_epoch_list.append(loss_epoch)
         loss1_epoch_list.append(loss1_epoch)
         loss2_epoch_list.append(loss2_epoch)
@@ -233,6 +238,7 @@ def main(output_directory):
             "Validation loss per epoch": val_loss,
             "Validation loss1 per epoch": val_loss1,
             "Validation loss2 per epoch": val_loss2,
+            "Mel loss (MSE loss)": mel_loss_epoch
         })
         # data = [[x, y] for (x, y) in zip(epoch_num_list, loss_epoch_list)]
         # data1 = [[x, y] for (x, y) in zip(epoch_num_list, loss1_epoch_list)]
