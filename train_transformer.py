@@ -125,7 +125,7 @@ def main(output_directory):
             loss2_iter += ssm_loss2.item()
             loss2_epoch += ssm_loss2.item()
             # mel_loss = nn.L1Loss()(mel_pred, mel)
-            # loss = ssm_loss + mel_loss
+            loss = ssm_loss
             # mel_loss_epoch += mel_loss
 
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
@@ -265,6 +265,10 @@ def main(output_directory):
         draw_loss_figures([loss_epoch_list, loss1_epoch_list, loss2_epoch_list],
                           [val_loss_epoch_list, val_loss1_epoch_list, val_loss2_epoch_list],
                           epoch_list, output_directory)
+        if global_step % hp.save_step == 0:
+            t.save({'model': m.state_dict(),
+                    'optimizer': optimizer.state_dict()},
+                   os.path.join(hp.checkpoint_path, 'checkpoint_ssm-tts_%d.pth.tar' % global_step))
 
 
 if __name__ == '__main__':
