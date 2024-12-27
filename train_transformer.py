@@ -96,7 +96,7 @@ def main(output_directory):
     loss1_iter = 0
     loss2_iter = 0
     for epoch in range(hp.epochs):
-        dataloader = DataLoader(dataset, batch_size=hp.batch_size, shuffle=True, collate_fn=collate_fn_transformer, drop_last=True, num_workers=8)
+        dataloader = DataLoader(dataset, batch_size=hp.batch_size, shuffle=True, collate_fn=collate_fn_transformer, drop_last=True, num_workers=2)
         pbar = tqdm(dataloader)
         loss_epoch = 0
         loss1_epoch = 0
@@ -107,23 +107,27 @@ def main(output_directory):
             if global_step < 400000:
                 adjust_learning_rate(optimizer, global_step)
 
-            character, mel, mel_input, pos_text, pos_mel, _ = data
+            character, ref_mel, t2_mel, pos_text, pos_mel, text_len = data
 
             stop_tokens = t.abs(pos_mel.ne(0).type(t.float) - 1)
 
             character = character.to(device)
-            mel = mel.to(device)
-            mel_input = mel_input.to(device)
+            ref_mel = ref_mel.to(device)
+            t2_mel = t2_mel.to(device)
             pos_text = pos_text.to(device)
             pos_mel = pos_mel.to(device)
 
-            loss, loss1, loss2 = m.forward(character, mel, pos_text, pos_mel)
-            loss_iter += loss.item()
-            loss_epoch += loss.item()
-            loss1_iter += loss1.item()
-            loss1_epoch += loss1.item()
-            loss2_iter += loss2.item()
-            loss2_epoch += loss2.item()            # mel_loss = nn.L1Loss()(mel_pred, mel)
+            ssm_loss, ssm_loss1, ssm_loss2, score = m.forward(character, t2_mel, pos_text, pos_mel)
+            loss_iter += ssm_loss.item()
+            loss_epoch += ssm_loss.item()
+            loss1_iter += ssm_loss1.item()
+            loss1_epoch += ssm_loss1.item()
+            loss2_iter += ssm_loss2.item()
+            loss2_epoch += ssm_loss2.item()
+            # mel_loss = nn.L1Loss()(mel_pred, mel)
+            # loss = ssm_loss + mel_loss
+            # mel_loss_epoch += mel_loss
+
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
 
             # loss = mel_loss + post_mel_loss

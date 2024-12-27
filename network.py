@@ -236,7 +236,7 @@ class Model(nn.Module):
         loss1 = t.sum(t.sum(vectors * grad2 * mel_mask, dim=-1) / 80, dim=-1) / mel_length
 
         loss = loss1 + loss2
-        return loss.mean(), loss1.mean(), loss2.mean()
+        return loss.mean(), loss1.mean(), loss2.mean(), logits
         # return logits.mean()
 
 class ModelPostNet(nn.Module):

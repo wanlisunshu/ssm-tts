@@ -39,22 +39,30 @@ class LJDatasets(Dataset):
 
     def __getitem__(self, idx):
         wav_name = self.landmarks_frame[idx][0]
-        text = self.landmarks_frame[idx][1]
+        char_text = self.landmarks_frame[idx][1]
 
-        text = np.asarray(text_to_sequence(text, [hp.cleaners]), dtype=np.int32)
+        text = np.asarray(text_to_sequence(char_text, [hp.cleaners]), dtype=np.int32)
 
-        _, mel = self.get_neg_mel(wav_name)
-        # audio_name = wav_name.strip().split('/')[4]
-        # audio_name = 'pos_train_val_mels' + '/' + audio_name + '.pt'
-        # mel = t.load(audio_name).T
+        # load t2 wav without length limit
+        # _, mel = self.get_neg_mel(wav_name)
+
+        audio_name = wav_name.strip().split('/')[4]
+        # load reference wav
+        audio_name_ref = 'pos_train_val_mels' + '/' + audio_name + '.pt'
+        # load t2 wav, frames equal to reference
+        audio_name_t2_fixed_len = 't2_fixed_len' + '/' + audio_name + '.pt'
+        ref_mel = t.load(audio_name_ref).T
+        assert char_text == list(t.load(audio_name_t2_fixed_len).keys())[0]
+        t2_mel = list(t.load(audio_name_t2_fixed_len).values())[0].T
+        assert ref_mel.shape == t2_mel.shape
 
         # mel = np.load(wav_name[:-4] + '.pt.npy')
-        mel_input = np.concatenate ([np.zeros([1,hp.num_mels], np.float32), mel[:-1,:]], axis=0)
+        # mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), ref_mel[:-1,:]], axis=0)
         text_length = len(text)
         pos_text = np.arange(1, text_length + 1)
-        pos_mel = np.arange(1, mel.shape[0] + 1)
+        pos_mel = np.arange(1, ref_mel.shape[0] + 1)
 
-        sample = {'text': text, 'mel': mel, 'text_length':text_length, 'mel_input':mel_input, 'pos_mel':pos_mel, 'pos_text':pos_text}
+        sample = {'text': text, 'ref_mel': ref_mel, 't2_fixed_len_mel': t2_mel, 'text_length': text_length, 'pos_mel': pos_mel, 'pos_text': pos_text}
 
         return sample
     
@@ -88,27 +96,30 @@ def collate_fn_transformer(batch):
     if isinstance(batch[0], collections.abc.Mapping):
 
         text = [d['text'] for d in batch]
-        mel = [d['mel'] for d in batch]
-        mel_input = [d['mel_input'] for d in batch]
+        ref_mel = [d['ref_mel'] for d in batch]
+        t2_mel = [d['t2_fixed_len_mel'] for d in batch]
+        # mel_input = [d['mel_input'] for d in batch]
         text_length = [d['text_length'] for d in batch]
         pos_mel = [d['pos_mel'] for d in batch]
-        pos_text= [d['pos_text'] for d in batch]
+        pos_text = [d['pos_text'] for d in batch]
         
-        text = [i for i,_ in sorted(zip(text, text_length), key=lambda x: x[1], reverse=True)]
-        mel = [i for i, _ in sorted(zip(mel, text_length), key=lambda x: x[1], reverse=True)]
-        mel_input = [i for i, _ in sorted(zip(mel_input, text_length), key=lambda x: x[1], reverse=True)]
+        text = [i for i, _ in sorted(zip(text, text_length), key=lambda x: x[1], reverse=True)]
+        ref_mel = [i for i, _ in sorted(zip(ref_mel, text_length), key=lambda x: x[1], reverse=True)]
+        t2_mel = [i for i, _ in sorted(zip(t2_mel, text_length), key=lambda x: x[1], reverse=True)]
+        # mel_input = [i for i, _ in sorted(zip(mel_input, text_length), key=lambda x: x[1], reverse=True)]
         pos_text = [i for i, _ in sorted(zip(pos_text, text_length), key=lambda x: x[1], reverse=True)]
         pos_mel = [i for i, _ in sorted(zip(pos_mel, text_length), key=lambda x: x[1], reverse=True)]
         text_length = sorted(text_length, reverse=True)
         # PAD sequences with largest length of the batch
         text = _prepare_data(text).astype(np.int32)
-        mel = _pad_mel(mel)
-        mel_input = _pad_mel(mel_input)
+        ref_mel = _pad_mel(ref_mel)
+        t2_mel = _pad_mel(t2_mel)
+        # mel_input = _pad_mel(mel_input)
         pos_mel = _prepare_data(pos_mel).astype(np.int32)
         pos_text = _prepare_data(pos_text).astype(np.int32)
 
 
-        return t.LongTensor(text), t.FloatTensor(mel), t.FloatTensor(mel_input), t.LongTensor(pos_text), t.LongTensor(pos_mel), t.LongTensor(text_length)
+        return t.LongTensor(text), t.FloatTensor(ref_mel), t.FloatTensor(t2_mel), t.LongTensor(pos_text), t.LongTensor(pos_mel), t.LongTensor(text_length)
 
     raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}"
                      .format(type(batch[0]))))
