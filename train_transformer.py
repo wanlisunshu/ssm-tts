@@ -26,6 +26,7 @@ def validation(m, epoch, device):
     val_loss = 0.0
     val_loss1 = 0.0
     val_loss2 = 0.0
+    val_mel_loss = 0.0
 
     pbar = tqdm(val_loader)
     for i, data in enumerate(pbar):
@@ -40,20 +41,22 @@ def validation(m, epoch, device):
         pos_text = pos_text.to(device)
         pos_mel = pos_mel.to(device)
 
-        loss, loss1, loss2 = m.forward(character, mel, pos_text, pos_mel)
-
+        loss, loss1, loss2, mel_pred = m.forward(character, mel_input, pos_text, pos_mel)
+        mel_loss = nn.L1Loss()(mel_pred, mel)
+        
         val_loss += loss.item()
         val_loss1 += loss1.item()
         val_loss2 += loss2.item()
+        val_mel_loss += mel_loss
     val_loss = val_loss / (len(val_loader) + 1)
     val_loss1 = val_loss1 / (len(val_loader) + 1)
     val_loss2 = val_loss2 / (len(val_loader) + 1)
-
+    val_mel_loss = val_mel_loss / (len(val_loader) + 1)
     m.train()
     print("Validation average loss in epoch {}: {:9f}, loss1: {:9f}, loss2 {:9f} ".format(epoch, val_loss,
                                                                                                           val_loss1,
                                                                                                           val_loss2))
-    return val_loss, val_loss1, val_loss2
+    return val_loss, val_loss1, val_loss2, val_mel_loss
 
 
 def main(output_directory):
@@ -214,7 +217,7 @@ def main(output_directory):
 
             # Update weights
             optimizer.step()
-        val_loss, val_loss1, val_loss2 = validation(m, epoch, device)
+        val_loss, val_loss1, val_loss2, val_mel_loss = validation(m, epoch, device)
 
         val_loss_epoch_list.append(val_loss)
         val_loss1_epoch_list.append(val_loss1)
@@ -238,7 +241,8 @@ def main(output_directory):
             "Validation loss per epoch": val_loss,
             "Validation loss1 per epoch": val_loss1,
             "Validation loss2 per epoch": val_loss2,
-            "Mel loss (MSE loss)": mel_loss_epoch
+            "Mel loss (MSE loss)": mel_loss_epoch,
+            "Validation mel loss (MSE loss)": val_mel_loss
         })
         # data = [[x, y] for (x, y) in zip(epoch_num_list, loss_epoch_list)]
         # data1 = [[x, y] for (x, y) in zip(epoch_num_list, loss1_epoch_list)]

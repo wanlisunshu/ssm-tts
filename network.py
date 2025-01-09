@@ -84,7 +84,7 @@ class MelDecoder(nn.Module):
         # ]))
         self.stop_linear = Linear(num_hidden, 1, w_init='sigmoid')
 
-        self.postconvnet = PostConvNet(num_hidden)
+        # self.postconvnet = PostConvNet(num_hidden)
 
         # self.energy_weights_logits = nn.Sequential(OrderedDict([
         #     ('fc1', Linear(num_hidden, num_hidden * 2)),
@@ -173,16 +173,16 @@ class MelDecoder(nn.Module):
         # logits = logits.mul(energy_weights)
         # logits = logits.sum(dim=1)
 
-        # Post Mel Network
-        postnet_input = mel_out.transpose(1, 2)
-        out = self.postconvnet(postnet_input)
-        out = postnet_input + out
-        out = out.transpose(1, 2)
+        # # Post Mel Network
+        # postnet_input = mel_out.transpose(1, 2)
+        # out = self.postconvnet(postnet_input)
+        # out = postnet_input + out
+        # out = out.transpose(1, 2)
 
         # Stop tokens
         stop_tokens = self.stop_linear(decoder_input)
 
-        return mel_out, out, attn_dot_list, stop_tokens, attn_dec_list
+        return mel_out, attn_dot_list, stop_tokens, attn_dec_list
         # logits = mel_out
         # return logits
 
@@ -199,7 +199,7 @@ class Model(nn.Module):
         self.unet = Decoder(hp.n_mels, hp.n_mels)
     def forward(self, characters, mel_input, pos_text, pos_mel):
         memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
-        mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
+        mel_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
                                                                                              pos=pos_mel)
         #
         # return mel_output, postnet_output, attn_probs, stop_preds, attns_enc, attns_dec
