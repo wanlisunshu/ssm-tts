@@ -45,7 +45,6 @@ class LJDatasets(Dataset):
 
         # load t2 wav without length limit
         # _, mel = self.get_neg_mel(wav_name)
-
         audio_name = wav_name.strip().split('/')[4]
         # load reference wav
         audio_name_ref = 'pos_train_val_mels' + '/' + audio_name + '.pt'
