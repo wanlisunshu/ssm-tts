@@ -125,7 +125,8 @@ def main(output_directory):
             loss2_iter += ssm_loss2.item()
             loss2_epoch += ssm_loss2.item()
             # mel_loss = nn.L1Loss()(mel_pred, mel)
-            loss = ssm_loss
+            delta_loss = nn.MSELoss()(score, t2_mel-ref_mel) / score.shape[1]
+            loss = delta_loss
             # mel_loss_epoch += mel_loss
 
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
