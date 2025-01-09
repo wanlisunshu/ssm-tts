@@ -57,7 +57,7 @@ def validation(m, epoch, device):
 
 
 def main(output_directory):
-    wandb.init(project="only-unet-t2_in-ssm_loss")
+    wandb.init(project="only-unet-t2_in-delta_loss")
 
     if t.backends.mps.is_available():
         device = t.device("mps")
