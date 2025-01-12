@@ -30,29 +30,33 @@ def validation(m, epoch, device):
     pbar = tqdm(val_loader)
     for i, data in enumerate(pbar):
         pbar.set_description("Validation after epoch %d" % epoch)
-        character, mel, mel_input, pos_text, pos_mel, _ = data
+        character, ref_mel, t2_mel, pos_text, pos_mel, text_len = data
 
         stop_tokens = t.abs(pos_mel.ne(0).type(t.float) - 1)
 
         character = character.to(device)
-        mel = mel.to(device)
-        mel_input = mel_input.to(device)
+        ref_mel = ref_mel.to(device)
+        t2_mel = t2_mel.to(device)
         pos_text = pos_text.to(device)
         pos_mel = pos_mel.to(device)
 
-        loss, loss1, loss2 = m.forward(character, mel, pos_text, pos_mel)
+        ssm_loss, ssm_loss1, ssm_loss2, score = m.forward(character, t2_mel, pos_text, pos_mel)
 
-        val_loss += loss.item()
-        val_loss1 += loss1.item()
-        val_loss2 += loss2.item()
+        # loss, loss1, loss2, score = m.forward(character, mel, pos_text, pos_mel)
+
+        delta_loss = nn.MSELoss()(score, t2_mel - ref_mel) / score.shape[1]
+        val_loss += delta_loss .item()
+        # val_loss1 += loss1.item()
+        # val_loss2 += loss2.item()
     val_loss = val_loss / (len(val_loader) + 1)
-    val_loss1 = val_loss1 / (len(val_loader) + 1)
-    val_loss2 = val_loss2 / (len(val_loader) + 1)
+    # val_loss1 = val_loss1 / (len(val_loader) + 1)
+    # val_loss2 = val_loss2 / (len(val_loader) + 1)
 
     m.train()
-    print("Validation average loss in epoch {}: {:9f}, loss1: {:9f}, loss2 {:9f} ".format(epoch, val_loss,
-                                                                                                          val_loss1,
-                                                                                                          val_loss2))
+    # print("Validation average loss in epoch {}: {:9f}, loss1: {:9f}, loss2 {:9f} ".format(epoch, val_loss,
+    #                                                                                                       val_loss1,
+    #                                                                                                       val_loss2))
+    # print("Validation average loss in epoch {}: {:9f} ".format(epoch, val_loss）
     return val_loss, val_loss1, val_loss2
 
 
@@ -118,15 +122,16 @@ def main(output_directory):
             pos_mel = pos_mel.to(device)
 
             ssm_loss, ssm_loss1, ssm_loss2, score = m.forward(character, t2_mel, pos_text, pos_mel)
-            loss_iter += ssm_loss.item()
-            loss_epoch += ssm_loss.item()
-            loss1_iter += ssm_loss1.item()
-            loss1_epoch += ssm_loss1.item()
-            loss2_iter += ssm_loss2.item()
-            loss2_epoch += ssm_loss2.item()
+
+            # loss1_iter += ssm_loss1.item()
+            # loss1_epoch += ssm_loss1.item()
+            # loss2_iter += ssm_loss2.item()
+            # loss2_epoch += ssm_loss2.item()
             # mel_loss = nn.L1Loss()(mel_pred, mel)
             delta_loss = nn.MSELoss()(score, t2_mel-ref_mel) / score.shape[1]
             loss = delta_loss
+            loss_iter += loss.item()
+            loss_epoch += loss.item()
             # mel_loss_epoch += mel_loss
 
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
@@ -148,17 +153,17 @@ def main(output_directory):
             if global_step % hp.image_step == 1:
                 loss_iter /= hp.image_step
                 loss_iter_list.append(loss_iter)
-                loss1_iter /= hp.image_step
-                loss1_iter_list.append(loss1_iter)
-                loss2_iter /= hp.image_step
-                loss2_iter_list.append(loss2_iter)
+                # loss1_iter /= hp.image_step
+                # loss1_iter_list.append(loss1_iter)
+                # loss2_iter /= hp.image_step
+                # loss2_iter_list.append(loss2_iter)
 
                 iter_num_list.append(global_step)
                 loss_iter = 0
-                loss1_iter = 0
-                loss2_iter = 0
+                # loss1_iter = 0
+                # loss2_iter = 0
 
-                draw_iter_loss_figure([loss_iter_list, loss1_iter_list, loss2_iter_list], iter_num_list, 'iteration', output_directory)
+                # draw_iter_loss_figure([loss_iter_list, loss1_iter_list, loss2_iter_list], iter_num_list, 'iteration', output_directory)
                 # data = [[x, y] for (x, y) in zip(iter_num_list, loss_iter_list)]
                 # data1 = [[x, y] for (x, y) in zip(iter_num_list, loss1_iter_list)]
                 # data2 = [[x, y] for (x, y) in zip(iter_num_list, loss2_iter_list)]
@@ -218,26 +223,26 @@ def main(output_directory):
         val_loss, val_loss1, val_loss2 = validation(m, epoch, device)
 
         val_loss_epoch_list.append(val_loss)
-        val_loss1_epoch_list.append(val_loss1)
-        val_loss2_epoch_list.append(val_loss2)
+        # val_loss1_epoch_list.append(val_loss1)
+        # val_loss2_epoch_list.append(val_loss2)
 
         epoch_list.append(epoch)
 
         loss_epoch /= (len(dataloader) + 1)
-        loss1_epoch /= (len(dataloader) + 1)
-        loss2_epoch /= (len(dataloader) + 1)
+        # loss1_epoch /= (len(dataloader) + 1)
+        # loss2_epoch /= (len(dataloader) + 1)
         loss_epoch_list.append(loss_epoch)
-        loss1_epoch_list.append(loss1_epoch)
-        loss2_epoch_list.append(loss2_epoch)
+        # loss1_epoch_list.append(loss1_epoch)
+        # loss2_epoch_list.append(loss2_epoch)
         epoch_num_list.append(epoch)
-        draw_iter_loss_figure([loss_epoch_list, loss1_epoch_list, loss2_epoch_list], epoch_num_list, 'epoch', output_directory)
+        # draw_iter_loss_figure([loss_epoch_list, loss1_epoch_list, loss2_epoch_list], epoch_num_list, 'epoch', output_directory)
         wandb.log({
             "Total loss per epoch": loss_epoch, 
-            "Loss1 per epoch": loss1_epoch,
-            "Loss2 per epoc": loss2_epoch,
+            # "Loss1 per epoch": loss1_epoch,
+            # "Loss2 per epoc": loss2_epoch,
             "Validation loss per epoch": val_loss,
-            "Validation loss1 per epoch": val_loss1,
-            "Validation loss2 per epoch": val_loss2,
+            # "Validation loss1 per epoch": val_loss1,
+            # "Validation loss2 per epoch": val_loss2,
         })
         # data = [[x, y] for (x, y) in zip(epoch_num_list, loss_epoch_list)]
         # data1 = [[x, y] for (x, y) in zip(epoch_num_list, loss1_epoch_list)]
@@ -263,9 +268,9 @@ def main(output_directory):
         #          epoch_table2, "epoch", "loss", title="Loss2 per epoch")           
         #     }
         # )       
-        draw_loss_figures([loss_epoch_list, loss1_epoch_list, loss2_epoch_list],
-                          [val_loss_epoch_list, val_loss1_epoch_list, val_loss2_epoch_list],
-                          epoch_list, output_directory)
+        # draw_loss_figures([loss_epoch_list, loss1_epoch_list, loss2_epoch_list],
+        #                   [val_loss_epoch_list, val_loss1_epoch_list, val_loss2_epoch_list],
+        #                   epoch_list, output_directory)
         if global_step % hp.save_step == 0:
             t.save({'model': m.state_dict(),
                     'optimizer': optimizer.state_dict()},
