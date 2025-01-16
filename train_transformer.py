@@ -30,7 +30,7 @@ def validation(m, epoch, device):
     pbar = tqdm(val_loader)
     for i, data in enumerate(pbar):
         pbar.set_description("Validation after epoch %d" % epoch)
-        character, ref_mel, t2_mel, pos_text, pos_mel, text_len = data
+        character, ref_mel, t2_mel, pos_text, pos_mel, text_len, audio_name = data
 
         stop_tokens = t.abs(pos_mel.ne(0).type(t.float) - 1)
 
@@ -111,7 +111,7 @@ def main(output_directory):
             if global_step < 400000:
                 adjust_learning_rate(optimizer, global_step)
 
-            character, ref_mel, t2_mel, pos_text, pos_mel, text_len = data
+            character, ref_mel, t2_mel, pos_text, pos_mel, text_len, audio_name = data
 
             stop_tokens = t.abs(pos_mel.ne(0).type(t.float) - 1)
 

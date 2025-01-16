@@ -61,7 +61,8 @@ class LJDatasets(Dataset):
         pos_text = np.arange(1, text_length + 1)
         pos_mel = np.arange(1, ref_mel.shape[0] + 1)
 
-        sample = {'text': text, 'ref_mel': ref_mel, 't2_fixed_len_mel': t2_mel, 'text_length': text_length, 'pos_mel': pos_mel, 'pos_text': pos_text}
+        sample = {'text': text, 'ref_mel': ref_mel, 't2_fixed_len_mel': t2_mel, 'text_length': text_length,
+                  'pos_mel': pos_mel, 'pos_text': pos_text, 'audio_name': audio_name}
 
         return sample
     
@@ -101,6 +102,7 @@ def collate_fn_transformer(batch):
         text_length = [d['text_length'] for d in batch]
         pos_mel = [d['pos_mel'] for d in batch]
         pos_text = [d['pos_text'] for d in batch]
+        audio_name = [d['audio_name'] for d in batch]
         
         text = [i for i, _ in sorted(zip(text, text_length), key=lambda x: x[1], reverse=True)]
         ref_mel = [i for i, _ in sorted(zip(ref_mel, text_length), key=lambda x: x[1], reverse=True)]
@@ -108,6 +110,8 @@ def collate_fn_transformer(batch):
         # mel_input = [i for i, _ in sorted(zip(mel_input, text_length), key=lambda x: x[1], reverse=True)]
         pos_text = [i for i, _ in sorted(zip(pos_text, text_length), key=lambda x: x[1], reverse=True)]
         pos_mel = [i for i, _ in sorted(zip(pos_mel, text_length), key=lambda x: x[1], reverse=True)]
+        audio_name = [i for i, _ in sorted(zip(audio_name, text_length), key=lambda x: x[1], reverse=True)]
+
         text_length = sorted(text_length, reverse=True)
         # PAD sequences with largest length of the batch
         text = _prepare_data(text).astype(np.int32)
@@ -118,7 +122,8 @@ def collate_fn_transformer(batch):
         pos_text = _prepare_data(pos_text).astype(np.int32)
 
 
-        return t.LongTensor(text), t.FloatTensor(ref_mel), t.FloatTensor(t2_mel), t.LongTensor(pos_text), t.LongTensor(pos_mel), t.LongTensor(text_length)
+        return (t.LongTensor(text), t.FloatTensor(ref_mel), t.FloatTensor(t2_mel), t.LongTensor(pos_text),
+                t.LongTensor(pos_mel), t.LongTensor(text_length), audio_name)
 
     raise TypeError(("batch must contain tensors, numbers, dicts or lists; found {}"
                      .format(type(batch[0]))))
