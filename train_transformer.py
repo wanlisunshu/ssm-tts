@@ -121,7 +121,7 @@ def main(output_directory):
             pos_text = pos_text.to(device)
             pos_mel = pos_mel.to(device)
 
-            ssm_loss, ssm_loss1, ssm_loss2, score = m.forward(character, t2_mel, pos_text, pos_mel)
+            ssm_loss, ssm_loss1, ssm_loss2, score = m.forward(t2_mel, pos_mel)
 
             # loss1_iter += ssm_loss1.item()
             # loss1_epoch += ssm_loss1.item()

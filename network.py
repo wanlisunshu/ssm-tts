@@ -197,7 +197,7 @@ class Model(nn.Module):
         self.decoder = MelDecoder(hp.hidden_size)
         self.mel_linear = Linear(hp.hidden_size, hp.num_mels * hp.outputs_per_step)
         self.unet = Decoder(hp.n_mels, hp.n_mels)
-    def forward(self, characters, mel_input, pos_text, pos_mel):
+    def forward(self, mel_input, pos_mel):
         # memory, c_mask, attns_enc = self.encoder.forward(characters, pos=pos_text)
         # mel_output, postnet_output, attn_probs, stop_preds, attns_dec = self.decoder.forward(memory, mel_input, c_mask,
         #                                                                                      pos=pos_mel)
