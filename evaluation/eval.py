@@ -9,7 +9,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 import torch
-# import utmosv2
+import utmosv2
 from discrete_speech_metrics import MCD, LogF0RMSE, SpeechBERTScore
 from torchaudio.pipelines import SQUIM_OBJECTIVE
 from tqdm import tqdm
@@ -32,7 +32,7 @@ speechbert = SpeechBERTScore(
 )
 mcd = MCD(sr=SR)
 logf0 = LogF0RMSE(sr=SR)
-# utmos = utmosv2.create_model(pretrained=True, checkpoint_path=UTMOSV2_FILE)
+utmos = utmosv2.create_model(pretrained=True, checkpoint_path=UTMOSV2_FILE)
 
 if torch.backends.mps.is_available():
     device = torch.device("mps")
@@ -106,12 +106,12 @@ def evaluate(ref_result_folder, gen_result_folder, split):
 
         results[file_id] = compute_metrics(ref, gen)
         mp_inputs.append((file_id, ref, gen))
-    #
-    # utmos_results = utmos.predict(input_dir=gen_sample_folder)
-    #
-    # for utmos_result in utmos_results:
-    #     file_id = utmos_result["file_path"].split("/")[-1].replace(".wav", "")
-    #     results[file_id]["UTMOSv2"] = utmos_result["predicted_mos"]
+    
+    utmos_results = utmos.predict(input_dir=gen_sample_folder)
+    
+    for utmos_result in utmos_results:
+        file_id = utmos_result["file_path"].split("/")[-1].split("_")[0].replace(".wav", "")
+        results[file_id]["UTMOSv2"] = utmos_result["predicted_mos"]
 
     print("Computing MCD and LogF0RMSE")
     mp_outputs = compute_metrics_parallel(mp_inputs)
