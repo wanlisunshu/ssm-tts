@@ -152,7 +152,7 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
     relative_path = discriminator_path.split('/')[1].split('.')[0]
     # hifigan, vocoder_train_setup, denoiser = t.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_hifigan')
     # hifigan.to(device)
-    audio_path = output_directory + '_' + relative_path + '_step_' + str(step)
+    audio_path = output_directory + '/' + relative_path + '_step_' + str(step)
     if not os.path.exists(audio_path):
         os.makedirs(audio_path)
 
