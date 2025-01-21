@@ -9,7 +9,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 import torch
-import utmosv2
+# import utmosv2
 from discrete_speech_metrics import MCD, LogF0RMSE, SpeechBERTScore
 from torchaudio.pipelines import SQUIM_OBJECTIVE
 from tqdm import tqdm
@@ -32,7 +32,7 @@ speechbert = SpeechBERTScore(
 )
 mcd = MCD(sr=SR)
 logf0 = LogF0RMSE(sr=SR)
-utmos = utmosv2.create_model(pretrained=True, checkpoint_path=UTMOSV2_FILE)
+# utmos = utmosv2.create_model(pretrained=True, checkpoint_path=UTMOSV2_FILE)
 
 if torch.backends.mps.is_available():
     device = torch.device("mps")
@@ -120,7 +120,7 @@ def evaluate(ref_result_folder, gen_result_folder, split):
         results[file_id]["MCD"] = mcd_score
         results[file_id]["LogF0RMSE"] = logf0_score
 
-    json_file = Path(gen_result_folder) / "save" / f"eval_{split}.json"
+    json_file = Path(gen_result_folder) / f"eval_{split}.json"
     with open(json_file, "w") as f:
         json.dump(results, f)
 
@@ -144,7 +144,7 @@ def evaluate(ref_result_folder, gen_result_folder, split):
         }
 
     print("saving")
-    json_file = Path(gen_result_folder) / "save" / f"eval_stats_{split}.json"
+    json_file = Path(gen_result_folder) / f"eval_stats_{split}.json"
     with open(json_file, "w") as f:
         json.dump(statistics_results, f)
     print("done")
