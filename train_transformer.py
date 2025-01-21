@@ -274,7 +274,7 @@ def main(output_directory):
         if global_step % hp.save_step == 0:
             t.save({'model': m.state_dict(),
                     'optimizer': optimizer.state_dict()},
-                   os.path.join(hp.checkpoint_path, 'checkpoint_ssm-tts_%d.pth.tar' % global_step))
+                   os.path.join(output_directory, 'checkpoint_ssm-tts_%d.pth.tar' % global_step))
 
 
 if __name__ == '__main__':
