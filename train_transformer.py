@@ -66,7 +66,7 @@ def main(output_directory):
     if t.backends.mps.is_available():
         device = t.device("mps")
     else:
-        device = t.device('cuda:0')
+        device = t.device('cuda:1')
     print('Using device: ', device)
 
     # dataset = get_dataset()
