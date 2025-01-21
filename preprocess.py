@@ -29,7 +29,7 @@ class LJDatasets(Dataset):
         return librosa.load(filename, sr=hp.sample_rate)
 
     def get_neg_mel(self, filename):
-        audio_name = filename.strip().split('/')[4]
+        audio_name = filename.strip().split('/')[-1]
         audio_name = self.neg_mel_paths + '/' + audio_name + '.pt'
         text, neg_mel = load_neg_mel_drom_disk(audio_name)
         return text, neg_mel.T
@@ -45,7 +45,7 @@ class LJDatasets(Dataset):
 
         # load t2 wav without length limit
         # _, mel = self.get_neg_mel(wav_name)
-        audio_name = wav_name.strip().split('/')[4]
+        audio_name = wav_name.strip().split('/')[-1]
         # load reference wav
         audio_name_ref = 'pos_train_val_mels' + '/' + audio_name + '.pt'
         # load t2 wav, frames equal to reference
