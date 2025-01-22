@@ -124,7 +124,7 @@ def generate_audio(audio_name, mel_outputs, hifigan, hp):
 
 
 def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_directory,
-                              discriminator_path, file_list, step, device):
+                              discriminator_path, file_list, step, infer_dataset, device):
     discriminator = Model().to(device)
     discriminator.load_state_dict(t.load(discriminator_path, map_location=device)['model'])
     discriminator.eval()
@@ -153,7 +153,7 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
     relative_path = discriminator_path.split('/')[1].split('.')[0]
     # hifigan, vocoder_train_setup, denoiser = t.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_hifigan')
     # hifigan.to(device)
-    audio_path = output_directory + '/' + relative_path + '_step_' + str(step)
+    audio_path = output_directory + '/' + relative_path + '_step_' + str(step) + '_infer_dataset_' + infer_dataset
     if not os.path.exists(audio_path):
         os.makedirs(audio_path)
 
@@ -213,7 +213,7 @@ def iterative_inference_multi(output_directory, discriminator_path, step, infer_
         # generate_audio(audio_path, mel.unsqueeze(0).cuda() , waveglow)
 
         file_list = iterative_inference_batch(t2_mel, pos_mel, audio_name[0], hifigan, output_directory,
-                                              discriminator_path, file_list, step, device)
+                                              discriminator_path, file_list, step, infer_dataset, device)
 
 
 # def iterative_inference_single_on_disk(index, text, output_directory, neg_flag, train_or_val_flag):
