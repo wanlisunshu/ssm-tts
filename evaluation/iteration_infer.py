@@ -171,7 +171,7 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
     # total = sum(list(map(lambda x: x[0] > 0 and x[1] < 0, zip(energy_before, energy_after))))
     # print("transforming_rate: ", total / len(energy_before))
     # temp['transforming_rate'] = total / len(energy_before)
-    stats_data = output_directory + '_' + relative_path + '_step_' + str(step) + '/stats_data.pt'
+    stats_data = output_directory + '/' + relative_path + '_step_' + str(step) + '/stats_data.pt'
     t.save(temp, stats_data)
     return file_list
 
