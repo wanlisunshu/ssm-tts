@@ -54,7 +54,8 @@ class LJDatasets(Dataset):
         ref_mel = t.load(audio_name_ref).T
         assert char_text == list(t.load(audio_name_t2_fixed_len).keys())[0]
         t2_mel = list(t.load(audio_name_t2_fixed_len).values())[0].T
-        assert ref_mel.shape == t2_mel.shape
+        if self.infer_dataset is 't2_fixed_len':
+            assert ref_mel.shape == t2_mel.shape
 
         # mel = np.load(wav_name[:-4] + '.pt.npy')
         # mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), ref_mel[:-1,:]], axis=0)

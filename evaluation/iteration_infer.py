@@ -244,7 +244,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--model_path', type=str,
                         required=False, help='path of best model ')
     parser.add_argument('-d', '--infer_dataset', type=str,
-                        required=False, help='dataset for inference')
+                        required=True, help='dataset for inference')
     args = parser.parse_args()
     if args.hp:
         import args.hp as hp

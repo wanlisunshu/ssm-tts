@@ -282,7 +282,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output_directory', type=str,
                         help='directory to save checkpoints')
     parser.add_argument('-d', '--infer_dataset', type=str,
-                        required=False, help='dataset for inference')
+                        required=True, help='dataset for inference')
     args = parser.parse_args()
     Path(args.output_directory).mkdir(parents=True, exist_ok=True)
     main(args.output_directory, args.infer_dataset)
