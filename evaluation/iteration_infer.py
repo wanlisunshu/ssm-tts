@@ -129,11 +129,11 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
     discriminator.load_state_dict(t.load(discriminator_path, map_location=device)['model'])
     discriminator.eval()
 
-    learning_rate = 0.01
-    optimizer = t.optim.SGD([t2_mel], lr=learning_rate)
+    learning_rate = 0.003
+    # optimizer = t.optim.SGD([t2_mel], lr=learning_rate)
     # iter_num = 100
     for i in range(step):
-        optimizer.zero_grad()
+        # optimizer.zero_grad()
         _, _, _, score = discriminator.forward(t2_mel, pos_mel)
         # sigmoid = torch.nn.Sigmoid()
         # fake_logits = sigmoid(fake_logits)
@@ -145,9 +145,10 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
             # plot_mel(neg_mel.squeeze(0).T.float().data.cpu().numpy(), output_directory, mel_name)
             # bias_mel_name = 'difference_mel_after_iteration_{}'.format(i)
             # plot_mel((neg_mel.squeeze(0).T - original_neg_mel).float().data.cpu().numpy(), output_directory, bias_mel_name)
-        score = t.mean(t.mean(t.mean(score, 0), 0))
-        score.backward()
-        optimizer.step()
+        # score = t.mean(t.mean(t.mean(score, 0), 0))
+        t2_mel = t2_mel - learning_rate * score
+        # score.backward()
+        # optimizer.step()
 
     relative_path = discriminator_path.split('/')[1].split('.')[0]
     # hifigan, vocoder_train_setup, denoiser = t.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_hifigan')
