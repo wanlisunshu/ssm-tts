@@ -176,14 +176,14 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
     return file_list
 
 
-def iterative_inference_multi(output_directory, discriminator_path,  step):
+def iterative_inference_multi(output_directory, discriminator_path, step, infer_dataset):
     if t.backends.mps.is_available():
         device = t.device("mps")
     else:
         device = t.device('cuda:0')
     print('Using device: ', device)
 
-    dataset = LJDatasets(hp.val_path, os.path.join(hp.data_path, 'wavs'))
+    dataset = LJDatasets(hp.val_path, os.path.join(hp.data_path, 'wavs'), infer_dataset)
     # audio_paths_and_text = load_filepaths_and_text(hp.val_path)
     val_loader = DataLoader(dataset, batch_size=1, shuffle=False,
                             collate_fn=collate_fn_transformer, num_workers=2)
@@ -243,6 +243,8 @@ if __name__ == '__main__':
                         required=False, help='num of steps for iterative inference')
     parser.add_argument('-m', '--model_path', type=str,
                         required=False, help='path of best model ')
+    parser.add_argument('-d', '--infer_dataset', type=str,
+                        required=False, help='dataset for inference')
     args = parser.parse_args()
     if args.hp:
         import args.hp as hp
@@ -260,4 +262,4 @@ if __name__ == '__main__':
     # discriminator_path_list = ["result/best_ebm_model_after_epoch_291.pt"]
 
     # for path in discriminator_path_list:
-    iterative_inference_multi(args.output_directory, args.model_path, args.step)
+    iterative_inference_multi(args.output_directory, args.model_path, args.step, args.infer_dataset)

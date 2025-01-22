@@ -17,9 +17,9 @@ def adjust_learning_rate(optimizer, step_num, warmup_step=4000):
         param_group['lr'] = lr
 
 
-def validation(m, epoch, device):
+def validation(m, epoch, device, infer_dataset):
     m.eval()
-    val_set = LJDatasets(hp.val_path, os.path.join(hp.data_path, 'wavs'))
+    val_set = LJDatasets(hp.val_path, os.path.join(hp.data_path, 'wavs'), infer_dataset)
     val_loader = DataLoader(val_set, batch_size=hp.batch_size, shuffle=False,
                                 collate_fn=collate_fn_transformer, num_workers=8)
 
@@ -60,7 +60,7 @@ def validation(m, epoch, device):
     return val_loss, val_loss1, val_loss2
 
 
-def main(output_directory):
+def main(output_directory, infer_dataset='t2_fixed_len'):
     wandb.init(project="only-unet-t2_in-delta_loss")
 
     if t.backends.mps.is_available():
@@ -70,7 +70,7 @@ def main(output_directory):
     print('Using device: ', device)
 
     # dataset = get_dataset()
-    dataset = LJDatasets(hp.train_path, os.path.join(hp.data_path, 'wavs'))
+    dataset = LJDatasets(hp.train_path, os.path.join(hp.data_path, 'wavs'), infer_dataset)
     global_step = 0
 
     m = Model().to(device)
@@ -220,7 +220,7 @@ def main(output_directory):
 
             # Update weights
             optimizer.step()
-        val_loss, val_loss1, val_loss2 = validation(m, epoch, device)
+        val_loss, val_loss1, val_loss2 = validation(m, epoch, device, infer_dataset)
 
         val_loss_epoch_list.append(val_loss)
         # val_loss1_epoch_list.append(val_loss1)
@@ -281,6 +281,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output_directory', type=str,
                         help='directory to save checkpoints')
+    parser.add_argument('-d', '--infer_dataset', type=str,
+                        required=False, help='dataset for inference')
     args = parser.parse_args()
     Path(args.output_directory).mkdir(parents=True, exist_ok=True)
-    main(args.output_directory)
+    main(args.output_directory, args.infer_dataset)

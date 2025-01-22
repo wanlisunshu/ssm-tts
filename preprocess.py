@@ -14,7 +14,7 @@ from utils import load_neg_mel_drom_disk
 class LJDatasets(Dataset):
     """LJSpeech dataset."""
 
-    def __init__(self, filename, root_dir):
+    def __init__(self, filename, root_dir, infer_dataset):
         """
         Args:
             csv_file (string): Path to the csv file with annotations.
@@ -25,6 +25,7 @@ class LJDatasets(Dataset):
             self.landmarks_frame = [line.strip().split('|') for line in f]
         self.root_dir = root_dir
         self.neg_mel_paths = 'train_val_mels'
+        self.infer_dataset = infer_dataset
     def load_wav(self, filename):
         return librosa.load(filename, sr=hp.sample_rate)
 
@@ -49,7 +50,7 @@ class LJDatasets(Dataset):
         # load reference wav
         audio_name_ref = 'pos_train_val_mels' + '/' + audio_name + '.pt'
         # load t2 wav, frames equal to reference
-        audio_name_t2_fixed_len = 't2_fixed_len' + '/' + audio_name + '.pt'
+        audio_name_t2_fixed_len = self.infer_dataset + '/' + audio_name + '.pt'
         ref_mel = t.load(audio_name_ref).T
         assert char_text == list(t.load(audio_name_t2_fixed_len).keys())[0]
         t2_mel = list(t.load(audio_name_t2_fixed_len).values())[0].T
