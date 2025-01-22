@@ -164,15 +164,15 @@ def iterative_inference_batch(t2_mel, pos_mel,audio_name, hifigan, output_direct
     # print("iteration: {} energy score: {}".format(i, fake_logits.item()))
     # energy_after.append(fake_logits.item())
     file_list.append(audio_name.split('.')[0])
-    temp = {}
-    temp['file_list'] = file_list
+    # temp = {}
+    # temp['file_list'] = file_list
     # temp['energy_before'] = energy_before
     # temp['energy_after'] = energy_after
     # total = sum(list(map(lambda x: x[0] > 0 and x[1] < 0, zip(energy_before, energy_after))))
     # print("transforming_rate: ", total / len(energy_before))
     # temp['transforming_rate'] = total / len(energy_before)
-    stats_data = output_directory + '/' + relative_path + '_step_' + str(step) + '/stats_data.pt'
-    t.save(temp, stats_data)
+    # stats_data = output_directory + '/' + relative_path + '_step_' + str(step) + '/stats_data.pt'
+    # t.save(temp, stats_data)
     return file_list
 
 
