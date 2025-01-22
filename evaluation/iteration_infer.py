@@ -183,6 +183,7 @@ def iterative_inference_multi(output_directory, discriminator_path, step, infer_
         device = t.device('cuda:0')
     print('Using device: ', device)
 
+    print('Using dataset: ', infer_dataset)
     dataset = LJDatasets(hp.val_path, os.path.join(hp.data_path, 'wavs'), infer_dataset)
     # audio_paths_and_text = load_filepaths_and_text(hp.val_path)
     val_loader = DataLoader(dataset, batch_size=1, shuffle=False,

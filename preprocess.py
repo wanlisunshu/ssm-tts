@@ -61,7 +61,7 @@ class LJDatasets(Dataset):
         # mel_input = np.concatenate([np.zeros([1,hp.num_mels], np.float32), ref_mel[:-1,:]], axis=0)
         text_length = len(text)
         pos_text = np.arange(1, text_length + 1)
-        pos_mel = np.arange(1, ref_mel.shape[0] + 1)
+        pos_mel = np.arange(1, t2_mel.shape[0] + 1)
 
         sample = {'text': text, 'ref_mel': ref_mel, 't2_fixed_len_mel': t2_mel, 'text_length': text_length,
                   'pos_mel': pos_mel, 'pos_text': pos_text, 'audio_name': audio_name}
