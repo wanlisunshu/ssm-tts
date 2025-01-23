@@ -27,6 +27,10 @@ def validation(m, epoch, device, infer_dataset):
     val_loss1 = 0.0
     val_loss2 = 0.0
 
+    val_delta = 0.0
+    val_ssm = 0.0
+    val_ssm1 = 0.0
+    val_ssm2 = 0.0
     pbar = tqdm(val_loader)
     for i, data in enumerate(pbar):
         pbar.set_description("Validation after epoch %d" % epoch)
@@ -45,10 +49,19 @@ def validation(m, epoch, device, infer_dataset):
         # loss, loss1, loss2, score = m.forward(character, mel, pos_text, pos_mel)
 
         delta_loss = nn.MSELoss()(score, t2_mel - ref_mel) / score.shape[1]
-        val_loss += delta_loss .item()
+        loss = delta_loss + ssm_loss
+        val_loss += loss.item()
+        val_delta += delta_loss.item()
+        val_ssm += ssm_loss.item()
+        val_ssm1 += ssm_loss1.item()
+        val_ssm2 += ssm_loss2.item()
         # val_loss1 += loss1.item()
         # val_loss2 += loss2.item()
     val_loss = val_loss / (len(val_loader) + 1)
+    val_delta = val_delta / (len(val_loader) + 1)
+    val_ssm = val_ssm / (len(val_loader) + 1)
+    val_ssm1 = val_ssm1 / (len(val_loader) + 1)
+    val_ssm2 = val_ssm2 / (len(val_loader) + 1)
     # val_loss1 = val_loss1 / (len(val_loader) + 1)
     # val_loss2 = val_loss2 / (len(val_loader) + 1)
 
@@ -57,11 +70,11 @@ def validation(m, epoch, device, infer_dataset):
     #                                                                                                       val_loss1,
     #                                                                                                       val_loss2))
     # print("Validation average loss in epoch {}: {:9f} ".format(epoch, val_loss）
-    return val_loss, val_loss1, val_loss2
+    return val_loss, val_delta, val_ssm, val_ssm1, val_ssm2
 
 
 def main(output_directory, infer_dataset='t2_fixed_len'):
-    wandb.init(project="only-unet-t2_in-ssm_loss")
+    wandb.init(project="only-unet-t2_in-ssm&delta_loss")
 
     if t.backends.mps.is_available():
         device = t.device("mps")
@@ -103,6 +116,10 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
         dataloader = DataLoader(dataset, batch_size=hp.batch_size, shuffle=True, collate_fn=collate_fn_transformer, drop_last=True, num_workers=2)
         pbar = tqdm(dataloader)
         loss_epoch = 0
+        ssm_epoch = 0
+        delta_epoch = 0
+        ssm1_epoch = 0
+        ssm2_epoch = 0
         loss1_epoch = 0
         loss2_epoch = 0
         for i, data in enumerate(pbar):
@@ -122,7 +139,7 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
             pos_mel = pos_mel.to(device)
 
             ssm_loss, ssm_loss1, ssm_loss2, score = m.forward(t2_mel, pos_mel)
-            loss = ssm_loss
+            # loss = ssm_loss
 
             # loss1_iter += ssm_loss1.item()
             # loss1_epoch += ssm_loss1.item()
@@ -130,11 +147,15 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
             # loss2_epoch += ssm_loss2.item()
             # mel_loss = nn.L1Loss()(mel_pred, mel)
 
-            # delta_loss = nn.MSELoss()(score, t2_mel-ref_mel) / score.shape[1]
-            # loss = delta_loss
+            delta_loss = nn.MSELoss()(score, t2_mel-ref_mel) / score.shape[1]
+            loss = delta_loss + ssm_loss
 
             loss_iter += loss.item()
             loss_epoch += loss.item()
+            ssm_epoch += ssm_loss.item()
+            delta_epoch += delta_loss.item()
+            ssm1_epoch += ssm_loss1.item()
+            ssm2_epoch += ssm_loss2.item()
             # mel_loss_epoch += mel_loss
 
             # post_mel_loss = nn.L1Loss()(postnet_pred, mel)
@@ -223,7 +244,7 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
 
             # Update weights
             optimizer.step()
-        val_loss, val_loss1, val_loss2 = validation(m, epoch, device, infer_dataset)
+        val_loss, val_delta, val_ssm, val_ssm1, val_ssm2 = validation(m, epoch, device, infer_dataset)
 
         val_loss_epoch_list.append(val_loss)
         # val_loss1_epoch_list.append(val_loss1)
@@ -232,6 +253,10 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
         epoch_list.append(epoch)
 
         loss_epoch /= (len(dataloader) + 1)
+        ssm_epoch /= (len(dataloader) + 1)
+        delta_epoch /= (len(dataloader) + 1)
+        ssm1_epoch /= (len(dataloader) + 1)
+        ssm2_epoch /= (len(dataloader) + 1)
         # loss1_epoch /= (len(dataloader) + 1)
         # loss2_epoch /= (len(dataloader) + 1)
         loss_epoch_list.append(loss_epoch)
@@ -240,10 +265,18 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
         epoch_num_list.append(epoch)
         # draw_iter_loss_figure([loss_epoch_list, loss1_epoch_list, loss2_epoch_list], epoch_num_list, 'epoch', output_directory)
         wandb.log({
-            "Total loss per epoch": loss_epoch, 
+            "Total loss per epoch": loss_epoch,
+            "Training delta loss": delta_epoch,
+            "Training ssm loss": ssm_epoch,
+            "Training ssm1 loss": ssm1_epoch,
+            "Training ssm2 loss": ssm2_epoch,
             # "Loss1 per epoch": loss1_epoch,
             # "Loss2 per epoc": loss2_epoch,
             "Validation loss per epoch": val_loss,
+            "Validation delta loss per epoch": val_delta,
+            "Validation ssm loss per epoch": val_ssm,
+            "Validation ssm1 loss per epoch": val_ssm1,
+            "Validation ssm2 loss per epoch": val_ssm2,
             # "Validation loss1 per epoch": val_loss1,
             # "Validation loss2 per epoch": val_loss2,
         })
