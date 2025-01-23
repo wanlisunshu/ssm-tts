@@ -49,7 +49,7 @@ def validation(m, epoch, device, infer_dataset):
         # loss, loss1, loss2, score = m.forward(character, mel, pos_text, pos_mel)
 
         delta_loss = nn.MSELoss()(score, t2_mel - ref_mel) / score.shape[1]
-        loss = delta_loss + ssm_loss
+        loss = delta_loss
         val_loss += loss.item()
         val_delta += delta_loss.item()
         val_ssm += ssm_loss.item()
@@ -74,7 +74,7 @@ def validation(m, epoch, device, infer_dataset):
 
 
 def main(output_directory, infer_dataset='t2_fixed_len'):
-    wandb.init(project="only-unet-t2_in-ssm&delta_loss")
+    wandb.init(project="only-unet-t2_in-delta_loss")
 
     if t.backends.mps.is_available():
         device = t.device("mps")
@@ -148,7 +148,7 @@ def main(output_directory, infer_dataset='t2_fixed_len'):
             # mel_loss = nn.L1Loss()(mel_pred, mel)
 
             delta_loss = nn.MSELoss()(score, t2_mel-ref_mel) / score.shape[1]
-            loss = delta_loss + ssm_loss
+            loss = delta_loss
 
             loss_iter += loss.item()
             loss_epoch += loss.item()
