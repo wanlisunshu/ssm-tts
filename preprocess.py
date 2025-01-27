@@ -189,7 +189,7 @@ def _pad_mel(inputs):
 
 
 if __name__ == '__main__':
-    with open("/exp/exp2/acp21ws/contras-trans/filelists/ljs_audio_text_val_filelist_alter_1800.txt", encoding='utf-8') as f:
+    with open("/exp/exp2/acp21ws/ssm-tts/filelists/ljs_audio_text_val_filelist_600.txt", encoding='utf-8') as f:
         filepaths_and_text = [line.strip().split("|") for line in f]
     print(len(filepaths_and_text))
     for audio_path, text in filepaths_and_text:
@@ -197,6 +197,6 @@ if __name__ == '__main__':
         audio_filename = audio_filename.split('.')[0] + '_generated.wav'
         print(audio_filename)
         import shutil
-        src = '/exp/exp2/acp21ws/contras-trans/tacotron_audio_1/' + audio_filename
+        src = '/exp/exp2/acp21ws/contras-trans/tacotron_audio_1800/' + audio_filename
         dst = '/exp/exp2/acp21ws/contras-trans/tacotron_audio_600/' + audio_filename
         shutil.copyfile(src, dst)
