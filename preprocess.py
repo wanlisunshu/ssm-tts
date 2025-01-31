@@ -187,7 +187,6 @@ def _pad_mel(inputs):
     return np.stack([_pad_one(x, max_len) for x in inputs])
 
 
-
 if __name__ == '__main__':
     with open("/exp/exp2/acp21ws/ssm-tts/filelists/ljs_audio_text_val_filelist_600.txt", encoding='utf-8') as f:
         filepaths_and_text = [line.strip().split("|") for line in f]
