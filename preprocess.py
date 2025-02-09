@@ -186,3 +186,18 @@ def _pad_mel(inputs):
         max_len += 1
     return np.stack([_pad_one(x, max_len) for x in inputs])
 
+
+if __name__ == '__main__':
+    with open("/exp/exp2/acp21ws/ssm-tts/filelists/ljs_audio_text_val_filelist_1800.txt", encoding='utf-8') as f:
+        filepaths_and_text = [line.strip().split("|") for line in f]
+    print(len(filepaths_and_text))
+    for audio_path, text in filepaths_and_text:
+        audio_filename = audio_path.strip().split('/')[-1]
+        audio_filename = audio_filename.split('.')[0] + '_generated.wav'
+        print(audio_filename)
+        import shutil
+        src = '/exp/exp2/acp21ws/contras-trans/tacotron_audio_1800/' + audio_filename
+        dst = '/exp/exp2/acp21ws/contras-trans/tacotron_audio_600/' + audio_filename
+        # src = '/exp/exp2/acp21ws/ssm-tts/result_ssm_delta/checkpoint_ssm-tts_44000_step_100_infer_dataset_train_val_mels_1800/' + audio_filename
+        # dst = '/exp/exp2/acp21ws//ssm-tts/result_ssm_delta/checkpoint_ssm-tts_44000_step_100_infer_dataset_train_val_mels_1800/tacotron_audio_1800/' + audio_filename
+        shutil.copyfile(src, dst)
